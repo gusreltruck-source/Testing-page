@@ -1,0 +1,1793 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IBC / IRC Multi-Code Design Workbook</title>
+<style>
+:root {
+  --bg: #f8f7f4;
+  --surface: #ffffff;
+  --surface2: #f1efe8;
+  --border: #e0ddd5;
+  --border2: #c8c5bc;
+  --text: #1a1a18;
+  --text2: #5f5e5a;
+  --text3: #888780;
+  --accent: #534ab7;
+  --accent-bg: #eeedfe;
+  --accent-light: #afa9ec;
+  --pass: #3b6d11;
+  --pass-bg: #eaf3de;
+  --pass-border: #97c459;
+  --warn: #854f0b;
+  --warn-bg: #faeeda;
+  --warn-border: #ef9f27;
+  --fail: #a32d2d;
+  --fail-bg: #fcebeb;
+  --fail-border: #f09595;
+  --info: #185fa5;
+  --info-bg: #e6f1fb;
+  --info-border: #85b7eb;
+  --q-bg: #fbeaf0;
+  --q-border: #d4537e;
+  --q-text: #72243e;
+  --ref-bg: #eeedfe;
+  --ref-border: #7f77dd;
+  --ref-text: #3c3489;
+  --radius: 10px;
+  --radius-sm: 6px;
+  --shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1a1a18;
+    --surface: #242422;
+    --surface2: #2c2c2a;
+    --border: #3a3a38;
+    --border2: #4a4a48;
+    --text: #f1efe8;
+    --text2: #b4b2a9;
+    --text3: #888780;
+    --accent: #afa9ec;
+    --accent-bg: #26215c;
+    --accent-light: #534ab7;
+    --pass: #c0dd97;
+    --pass-bg: #173404;
+    --pass-border: #3b6d11;
+    --warn: #fac775;
+    --warn-bg: #412402;
+    --warn-border: #854f0b;
+    --fail: #f09595;
+    --fail-bg: #501313;
+    --fail-border: #a32d2d;
+    --info: #85b7eb;
+    --info-bg: #042c53;
+    --info-border: #185fa5;
+    --q-bg: #4b1528;
+    --q-border: #993556;
+    --q-text: #f4c0d1;
+    --ref-bg: #26215c;
+    --ref-border: #534ab7;
+    --ref-text: #cecbf6;
+    --shadow: 0 1px 3px rgba(0,0,0,0.3);
+  }
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);line-height:1.6;font-size:15px}
+a{color:var(--accent);text-decoration:none}
+/* HEADER */
+header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px;position:sticky;top:0;z-index:100}
+.header-inner{max-width:1100px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:56px}
+.logo{display:flex;align-items:center;gap:10px;font-weight:600;font-size:16px;color:var(--text)}
+.logo-icon{width:32px;height:32px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;flex-shrink:0}
+.badge{background:var(--pass-bg);color:var(--pass);border:1px solid var(--pass-border);font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;letter-spacing:.3px}
+/* HERO */
+.hero{background:var(--surface);border-bottom:1px solid var(--border);padding:48px 24px 40px}
+.hero-inner{max-width:1100px;margin:0 auto}
+.hero h1{font-size:clamp(26px,4vw,40px);font-weight:700;line-height:1.2;margin-bottom:12px;color:var(--text)}
+.hero p{color:var(--text2);font-size:16px;max-width:600px;margin-bottom:28px}
+.features{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:28px}
+.feature-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;display:flex;gap:12px;align-items:flex-start}
+.feature-icon{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.feature-card h3{font-size:14px;font-weight:600;margin-bottom:3px;color:var(--text)}
+.feature-card p{font-size:13px;color:var(--text2);line-height:1.4}
+/* MAIN */
+main{max-width:900px;margin:0 auto;padding:32px 20px 80px}
+/* CODE SELECTOR */
+.code-selector{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:32px;box-shadow:var(--shadow)}
+.code-selector h2{font-size:20px;font-weight:600;margin-bottom:8px}
+.code-selector p{color:var(--text2);font-size:14px;margin-bottom:24px}
+.code-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+.code-btn{background:var(--surface2);border:2px solid var(--border);border-radius:var(--radius);padding:20px 16px;cursor:pointer;text-align:left;transition:border-color .15s,background .15s;display:block;width:100%}
+.code-btn:hover{border-color:var(--accent-light);background:var(--accent-bg)}
+.code-btn.selected{border-color:var(--accent);background:var(--accent-bg)}
+.code-btn .cb-title{font-size:15px;font-weight:600;color:var(--text);display:block;margin-bottom:4px}
+.code-btn .cb-sub{font-size:12px;color:var(--text2)}
+.code-btn .cb-type{font-size:11px;font-weight:600;padding:2px 7px;border-radius:20px;margin-bottom:8px;display:inline-block}
+.ibc-tag{background:var(--info-bg);color:var(--info);border:1px solid var(--info-border)}
+.irc-tag{background:var(--warn-bg);color:var(--warn);border:1px solid var(--warn-border)}
+.start-btn{margin-top:24px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);padding:12px 28px;font-size:15px;font-weight:600;cursor:pointer;transition:opacity .15s}
+.start-btn:hover{opacity:.9}
+.start-btn:disabled{opacity:.4;cursor:not-allowed}
+/* WORKBOOK */
+#workbook{display:none}
+/* PROGRESS */
+.progress-bar-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px 24px;margin-bottom:20px;box-shadow:var(--shadow)}
+.progress-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.progress-header span{font-size:13px;color:var(--text2)}
+.progress-header strong{font-size:14px;font-weight:600;color:var(--accent)}
+.progress-track{background:var(--surface2);border-radius:999px;height:8px;overflow:hidden}
+.progress-fill{background:var(--accent);height:100%;border-radius:999px;transition:width .4s ease}
+.step-dots{display:flex;gap:6px;margin-top:12px;flex-wrap:wrap}
+.step-dot{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;cursor:default;transition:background .2s,color .2s;border:1.5px solid var(--border)}
+.step-dot.done{background:var(--pass-bg);color:var(--pass);border-color:var(--pass-border)}
+.step-dot.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.step-dot.locked{background:var(--surface2);color:var(--text3);border-color:var(--border)}
+/* STEP CARD */
+.step-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+.step-header{padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:16px}
+.step-num{width:40px;height:40px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;flex-shrink:0}
+.step-num.done{background:var(--pass-bg);color:var(--pass)}
+.step-title{flex:1}
+.step-title h2{font-size:17px;font-weight:600;margin-bottom:3px}
+.step-title .step-ref{font-size:12px;color:var(--accent);font-weight:500}
+.step-body{padding:24px}
+/* QUESTION BLOCK */
+.q-block{background:var(--q-bg);border:1px solid var(--q-border);border-left:4px solid var(--q-border);border-radius:var(--radius-sm);padding:14px 16px;margin-bottom:20px}
+.q-block p{color:var(--q-text);font-size:14px;line-height:1.5}
+.q-block strong{font-weight:600}
+/* REFERENCE BLOCK */
+.ref-block{background:var(--ref-bg);border:1px solid var(--ref-border);border-left:4px solid var(--ref-border);border-radius:var(--radius-sm);padding:14px 16px;margin-bottom:20px}
+.ref-block p{color:var(--ref-text);font-size:13px;line-height:1.5}
+.ref-block strong{font-weight:600;display:block;margin-bottom:4px}
+/* FORMS */
+label{font-size:13px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px}
+input[type=text],input[type=number],select{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 11px;font-size:14px;color:var(--text);width:100%;outline:none;transition:border-color .15s;font-family:inherit}
+input[type=text]:focus,input[type=number]:focus,select:focus{border-color:var(--accent)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+.form-row.cols3{grid-template-columns:1fr 1fr 1fr}
+.form-group{display:flex;flex-direction:column;gap:4px}
+/* FLOOR TABLE */
+.floor-table-wrap{overflow-x:auto;margin-bottom:16px}
+table.floor-tbl{width:100%;border-collapse:collapse;font-size:13px}
+table.floor-tbl th{background:var(--surface2);color:var(--text2);font-weight:600;padding:8px 10px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap}
+table.floor-tbl td{padding:7px 6px;border-bottom:1px solid var(--border);vertical-align:middle}
+table.floor-tbl tr:last-child td{border-bottom:none}
+table.floor-tbl select,table.floor-tbl input{width:100%;min-width:80px}
+.del-btn{background:var(--fail-bg);color:var(--fail);border:1px solid var(--fail-border);border-radius:4px;padding:3px 8px;font-size:12px;cursor:pointer;white-space:nowrap}
+.del-btn:hover{opacity:.8}
+.add-floor-btn{background:var(--info-bg);color:var(--info);border:1px solid var(--info-border);border-radius:var(--radius-sm);padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer}
+.add-floor-btn:hover{opacity:.8}
+/* RESULTS TABLE */
+.results-tbl-wrap{overflow-x:auto;margin:16px 0}
+table.res-tbl{width:100%;border-collapse:collapse;font-size:13px}
+table.res-tbl th{background:var(--surface2);color:var(--text2);font-weight:600;padding:9px 12px;text-align:left;border-bottom:2px solid var(--border)}
+table.res-tbl td{padding:8px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+table.res-tbl tr:last-child td{border-bottom:none}
+.pill{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
+.pill.pass{background:var(--pass-bg);color:var(--pass);border:1px solid var(--pass-border)}
+.pill.warn{background:var(--warn-bg);color:var(--warn);border:1px solid var(--warn-border)}
+.pill.fail{background:var(--fail-bg);color:var(--fail);border:1px solid var(--fail-border)}
+.pill.info{background:var(--info-bg);color:var(--info);border:1px solid var(--info-border)}
+.pill.neutral{background:var(--surface2);color:var(--text2);border:1px solid var(--border)}
+/* RESULT SUMMARY BOX */
+.result-box{border-radius:var(--radius-sm);padding:14px 16px;margin-bottom:12px;border-left:4px solid}
+.result-box.pass{background:var(--pass-bg);border-color:var(--pass-border);color:var(--pass)}
+.result-box.warn{background:var(--warn-bg);border-color:var(--warn-border);color:var(--warn)}
+.result-box.fail{background:var(--fail-bg);border-color:var(--fail-border);color:var(--fail)}
+.result-box.info{background:var(--info-bg);border-color:var(--info-border);color:var(--info)}
+.result-box p{font-size:13px;line-height:1.5}
+.result-box strong{font-weight:600}
+/* BUTTONS */
+.btn-row{display:flex;gap:12px;margin-top:20px;flex-wrap:wrap}
+.btn-primary{background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);padding:10px 22px;font-size:14px;font-weight:600;cursor:pointer;transition:opacity .15s}
+.btn-primary:hover{opacity:.9}
+.btn-secondary{background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 22px;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s}
+.btn-secondary:hover{background:var(--border)}
+.btn-danger{background:var(--fail-bg);color:var(--fail);border:1px solid var(--fail-border);border-radius:var(--radius-sm);padding:10px 22px;font-size:14px;font-weight:600;cursor:pointer}
+/* FINAL SUMMARY */
+.summary-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;margin-top:20px}
+.summary-header{background:var(--accent-bg);border-bottom:1px solid var(--accent-light);padding:20px 24px}
+.summary-header h2{font-size:20px;font-weight:700;color:var(--accent)}
+.summary-header p{font-size:13px;color:var(--text2);margin-top:4px}
+.summary-body{padding:24px}
+.summary-section{margin-bottom:24px}
+.summary-section h3{font-size:14px;font-weight:600;color:var(--text2);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.5px}
+.summary-row{display:flex;justify-content:space-between;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(--border);gap:12px;flex-wrap:wrap}
+.summary-row:last-child{border-bottom:none}
+.summary-row .sr-label{font-size:13px;color:var(--text2);flex:1}
+.summary-row .sr-val{font-size:13px;font-weight:500;text-align:right}
+/* RADIO/CHECKBOX */
+.radio-group,.check-group{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
+.radio-option,.check-option{display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;transition:border-color .15s}
+.radio-option:hover,.check-option:hover{border-color:var(--accent-light)}
+.radio-option.selected,.check-option.selected{border-color:var(--accent);background:var(--accent-bg)}
+.radio-option input,.check-option input{margin-top:2px;flex-shrink:0;accent-color:var(--accent)}
+.radio-option label,.check-option label{font-size:13px;font-weight:500;color:var(--text);cursor:pointer;line-height:1.4}
+.radio-option small,.check-option small{font-size:12px;color:var(--text2);display:block;margin-top:2px;font-weight:400}
+/* DIVIDER */
+hr{border:none;border-top:1px solid var(--border);margin:20px 0}
+/* FOOTER */
+footer{background:var(--surface);border-top:1px solid var(--border);padding:28px 24px;margin-top:60px}
+.footer-inner{max-width:1100px;margin:0 auto;display:flex;flex-direction:column;gap:8px;align-items:center;text-align:center}
+.footer-inner p{font-size:12px;color:var(--text3);line-height:1.6;max-width:700px}
+.footer-inner strong{color:var(--text2)}
+/* SPRINKLER TOGGLE */
+.sprinkler-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600}
+.spr-yes{background:var(--pass-bg);color:var(--pass);border:1px solid var(--pass-border)}
+.spr-no{background:var(--fail-bg);color:var(--fail);border:1px solid var(--fail-border)}
+/* SECTION LABEL */
+.section-label{font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px;margin-top:20px;display:block}
+/* TABLE NOTES */
+.tbl-note{font-size:12px;color:var(--text2);margin-top:6px;font-style:italic}
+/* RESPONSIVE */
+@media(max-width:600px){
+  .form-row,.form-row.cols3{grid-template-columns:1fr}
+  .header-inner{gap:8px}
+  .code-grid{grid-template-columns:1fr 1fr}
+  .features{grid-template-columns:1fr}
+  .btn-row{flex-direction:column}
+  .btn-row .btn-primary,.btn-row .btn-secondary{width:100%;text-align:center}
+}
+/* INLINE HELPERS */
+.text-muted{color:var(--text2);font-size:13px}
+.mt8{margin-top:8px}.mt12{margin-top:12px}.mt16{margin-top:16px}.mt20{margin-top:20px}
+.gap-wrap{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.step-locked-msg{text-align:center;padding:32px;color:var(--text3)}
+.step-locked-msg svg{margin-bottom:12px;opacity:.4}
+.inline-badge{display:inline-block;padding:1px 7px;border-radius:10px;font-size:11px;font-weight:600;margin-left:4px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="logo">
+      <div class="logo-icon">IBC</div>
+      <span>IBC / IRC Multi-Code Design Workbook</span>
+    </div>
+    <span class="badge">Free Tool</span>
+  </div>
+</header>
+
+<div class="hero">
+  <div class="hero-inner">
+    <h1>Multi-Code Design Workbook</h1>
+    <p>Step-by-step compliance worksheets for IBC 2018, IBC 2021, IRC 2018, and IRC 2021. Each step cites the exact code section, explains how to apply it, and shows live calculated results.</p>
+    <div class="features">
+      <div class="feature-card">
+        <div class="feature-icon" style="background:#e6f1fb">📋</div>
+        <div>
+          <h3>4 Code Editions</h3>
+          <p>IBC 2018, IBC 2021, IRC 2018, IRC 2021 — select the edition for your jurisdiction.</p>
+        </div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon" style="background:#eaf3de">✅</div>
+        <div>
+          <h3>10 Sequential Steps</h3>
+          <p>From project info to special inspections — locked steps ensure correct sequencing.</p>
+        </div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon" style="background:#faeeda">📊</div>
+        <div>
+          <h3>Live Calculations</h3>
+          <p>Pass/warn/fail results update as you enter data, with code references shown throughout.</p>
+        </div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon" style="background:#eeedfe">🏗️</div>
+        <div>
+          <h3>Compliance Summary</h3>
+          <p>Final printable summary with all IBC/IRC citations and compliance results.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<main>
+  <!-- CODE SELECTOR -->
+  <div id="code-selector-section">
+    <div class="code-selector">
+      <h2>Select Your Code Edition</h2>
+      <p>Choose the edition applicable to your jurisdiction. Steps and tables will reflect the selected code.</p>
+      <div class="code-grid">
+        <button class="code-btn" onclick="selectCode('IBC2021')" id="btn-IBC2021">
+          <span class="cb-type ibc-tag">IBC</span>
+          <span class="cb-title">IBC 2021</span>
+          <span class="cb-sub">International Building Code<br>2021 Edition</span>
+        </button>
+        <button class="code-btn" onclick="selectCode('IBC2018')" id="btn-IBC2018">
+          <span class="cb-type ibc-tag">IBC</span>
+          <span class="cb-title">IBC 2018</span>
+          <span class="cb-sub">International Building Code<br>2018 Edition</span>
+        </button>
+        <button class="code-btn" onclick="selectCode('IRC2021')" id="btn-IRC2021">
+          <span class="cb-type irc-tag">IRC</span>
+          <span class="cb-title">IRC 2021</span>
+          <span class="cb-sub">International Residential Code<br>2021 Edition</span>
+        </button>
+        <button class="code-btn" onclick="selectCode('IRC2018')" id="btn-IRC2018">
+          <span class="cb-type irc-tag">IRC</span>
+          <span class="cb-title">IRC 2018</span>
+          <span class="cb-sub">International Residential Code<br>2018 Edition</span>
+        </button>
+      </div>
+      <button class="start-btn" id="start-btn" onclick="startWorkbook()" disabled>Begin Workbook →</button>
+    </div>
+  </div>
+
+  <!-- WORKBOOK -->
+  <div id="workbook" style="display:none">
+    <div id="progress-section" class="progress-bar-wrap">
+      <div class="progress-header">
+        <span id="progress-label">Step 1 of 10</span>
+        <strong id="progress-code-label"></strong>
+      </div>
+      <div class="progress-track"><div class="progress-fill" id="progress-fill" style="width:10%"></div></div>
+      <div class="step-dots" id="step-dots"></div>
+    </div>
+    <div id="step-container"></div>
+    <div style="text-align:center;margin-top:28px">
+      <button class="btn-secondary" onclick="restartWorkbook()">← Start Over / Change Code</button>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="footer-inner">
+    <p><strong>Disclaimer:</strong> This workbook is a study and planning aid only. Results are based on simplified code tables and do not constitute a formal code analysis, engineering opinion, or building department determination. Always verify compliance with the authority having jurisdiction (AHJ) and consult a licensed architect or engineer for project-specific code analysis. IBC and IRC are published by the International Code Council (ICC).</p>
+    <p style="margin-top:4px">© 2024 IBC/IRC Multi-Code Design Workbook — Free Tool — Not affiliated with ICC</p>
+  </div>
+</footer>
+
+<script>
+// =========================================================
+// STATE
+// =========================================================
+const state = {
+  code: null,
+  currentStep: 1,
+  completedSteps: [],
+  results: {},
+  // IBC data
+  projectName: '',
+  projectCity: '',
+  floors: [],
+  constType: null,
+  sprinklered: false,
+  sprinklerReason: [],
+  // IRC data
+  dwellingType: '',
+  stories: 1,
+  floorArea: 0,
+  bedrooms: 2,
+  bathrooms: 1,
+  hasBasement: false,
+  hasGarage: false,
+  climateZone: '3',
+};
+
+function isIBC(){ return state.code && state.code.startsWith('IBC'); }
+function isIRC(){ return state.code && state.code.startsWith('IRC'); }
+function codeYear(){ return state.code ? parseInt(state.code.slice(3)) : 2021; }
+
+// =========================================================
+// CODE TABLES — IBC
+// =========================================================
+// Table 601: Fire-resistance ratings (hours) [beams/columns, exterior walls, interior partitions, floor]
+const CONST_TYPES = {
+  'IA':  {label:'Type I-A',  str:[3,3,2,2], htNS:160, htS:160, note:'Noncombustible'},
+  'IB':  {label:'Type I-B',  str:[2,2,1,2], htNS:65,  htS:65,  note:'Noncombustible'},
+  'IIA': {label:'Type II-A', str:[1,1,1,1], htNS:55,  htS:55,  note:'Noncombustible'},
+  'IIB': {label:'Type II-B', str:[0,0,0,0], htNS:55,  htS:55,  note:'Noncombustible'},
+  'IIIA':{label:'Type III-A',str:[1,2,1,1], htNS:50,  htS:50,  note:'Comb. interior'},
+  'IIIB':{label:'Type III-B',str:[0,2,0,0], htNS:50,  htS:50,  note:'Comb. interior'},
+  'IV':  {label:'Type IV-HT',str:[0,2,1,1], htNS:65,  htS:65,  note:'Heavy timber'},
+  'IVA': {label:'Type IV-A', str:[3,3,2,2], htNS:85,  htS:85,  note:'Mass timber'},
+  'IVB': {label:'Type IV-B', str:[2,2,1,2], htNS:75,  htS:75,  note:'Mass timber'},
+  'IVC': {label:'Type IV-C', str:[1,1,1,1], htNS:65,  htS:65,  note:'Mass timber'},
+  'VA':  {label:'Type V-A',  str:[1,1,1,1], htNS:50,  htS:50,  note:'Combustible'},
+  'VB':  {label:'Type V-B',  str:[0,0,0,0], htNS:40,  htS:40,  note:'Combustible'},
+};
+
+// Table 504.3 Allowable number of stories [NS, S13R, SA] (NS=unsprinklered, S13R=NFPA 13R, SA=NFPA 13)
+// Table 504.4 Allowable height in feet
+// Table 506.2 Allowable area per story (sf)
+const OCC_LIMITS = {
+//       NS-st S13R-st SA-st  NS-ht  SA-ht  NS-area  SA-area
+  'A-1': [1,   1,      3,     55,    85,    14400,   29900],
+  'A-2': [2,   2,      9,     55,    85,    14400,   29900],
+  'A-3': [2,   2,      9,     55,    85,    14400,   29900],
+  'A-4': [2,   2,      9,     55,    85,    14400,   29900],
+  'A-5': [null,null,  null,   null,  null,  null,    null],
+  'B':   [5,   5,      11,    55,    85,    28500,   57000],
+  'E':   [3,   4,      9,     55,    85,    23100,   46200],
+  'F-1': [4,   4,      8,     55,    85,    15500,   37500],
+  'F-2': [5,   6,      11,    55,    85,    28500,   57000],
+  'H-1': [1,   1,      1,     21,    21,    9500,    9500],
+  'H-2': [3,   3,      5,     55,    55,    9500,    14000],
+  'H-3': [6,   6,      7,     55,    55,    9500,    14000],
+  'H-4': [7,   7,      11,    55,    55,    17500,   35500],
+  'H-5': [4,   4,      10,    55,    85,    23000,   46000],
+  'I-1': [3,   3,      9,     55,    85,    9500,    19000],
+  'I-2': [2,   2,      5,     55,    75,    9500,    19000],
+  'I-3': [2,   2,      4,     55,    55,    9500,    19000],
+  'I-4': [1,   1,      6,     55,    85,    9500,    19000],
+  'M':   [4,   4,      12,    55,    85,    21500,   43000],
+  'R-1': [4,   4,      12,    55,    85,    24000,   48000],
+  'R-2': [4,   4,      12,    55,    85,    24000,   48000],
+  'R-3': [4,   4,      12,    55,    85,    19000,   38000],
+  'R-4': [4,   4,      12,    55,    85,    19000,   38000],
+  'S-1': [4,   4,      9,     55,    85,    17500,   35000],
+  'S-2': [5,   5,      11,    55,    85,    26000,   52000],
+  'U':   [2,   2,      4,     55,    55,    18000,   36000],
+  'Parking':[5,5,      11,    55,    85,    36000,   72000],
+};
+
+// Table 1004.5: Occupant load factors (sf/person) [gross, isGross]
+const OCC_LOAD = {
+  'A-1': [15, false],
+  'A-2': [15, true],
+  'A-3': [15, true],
+  'A-4': [15, false],
+  'A-5': [15, false],
+  'B':   [100, true],
+  'E':   [20, true],
+  'F-1': [200, true],
+  'F-2': [200, true],
+  'M':   [60, true],
+  'R-1': [200, true],
+  'R-2': [200, true],
+  'R-3': [200, true],
+  'R-4': [200, true],
+  'S-1': [300, true],
+  'S-2': [300, true],
+  'U':   [300, true],
+  'Parking':[200, true],
+  'H-1': [75, true],
+  'H-2': [75, true],
+  'H-3': [75, true],
+  'H-4': [75, true],
+  'H-5': [75, true],
+  'I-1': [105, true],
+  'I-2': [240, true],
+  'I-3': [105, true],
+  'I-4': [35, true],
+};
+
+// Table 1006.3.4 Single exit permitted
+const SINGLE_EXIT = {
+  'A': {maxOcc:49, maxStory:1, sprOnly:false},
+  'B': {maxOcc:49, maxStory:2, sprOnly:false},
+  'E': {maxOcc:49, maxStory:1, sprOnly:false},
+  'F': {maxOcc:49, maxStory:2, sprOnly:false},
+  'M': {maxOcc:49, maxStory:2, sprOnly:false},
+  'R-1':{maxOcc:10, maxStory:4, sprOnly:true},
+  'R-2':{maxOcc:4,  maxStory:4, sprOnly:true},
+  'S': {maxOcc:29, maxStory:2, sprOnly:false},
+  'U': {maxOcc:49, maxStory:2, sprOnly:false},
+};
+
+// Table 1017.2 Travel distance limits (ft) [NS, S]
+const TRAVEL_DIST = {
+  'A':    [200, 250],
+  'B':    [200, 300],
+  'E':    [200, 250],
+  'F-1':  [200, 250],
+  'F-2':  [300, 400],
+  'H-1':  [75,  75],
+  'H-2':  [75,  100],
+  'H-3':  [150, 175],
+  'H-4':  [175, 225],
+  'H-5':  [200, 250],
+  'I-1':  [200, 250],
+  'I-2':  [200, 250],
+  'I-3':  [200, 250],
+  'I-4':  [150, 200],
+  'M':    [200, 250],
+  'R-1':  [200, 250],
+  'R-2':  [200, 250],
+  'R-3':  [200, 250],
+  'S-1':  [200, 250],
+  'S-2':  [300, 400],
+  'U':    [200, 300],
+  'Parking':[200,250],
+};
+
+// Common path limits (ft) [NS, S] — §1006.2.1
+const COMMON_PATH = {
+  'A':    [75,  100],
+  'B':    [100, 100],
+  'E':    [75,  100],
+  'F':    [75,  100],
+  'H':    [75,  75],
+  'I':    [75,  125],
+  'M':    [75,  100],
+  'R':    [125, 125],
+  'S':    [100, 100],
+  'U':    [75,  100],
+};
+
+// Table 508.4 Separation requirements between occupancy groups (hours)
+const SEP_TABLE = {
+  'A-B': 1, 'A-E': 1, 'A-F': 2, 'A-I': 2, 'A-M': 1, 'A-R': 1, 'A-S': 1, 'A-U': 1,
+  'B-E': 0, 'B-F': 1, 'B-I': 2, 'B-M': 0, 'B-R': 1, 'B-S': 1, 'B-U': 1,
+  'E-F': 2, 'E-I': 2, 'E-M': 1, 'E-R': 1, 'E-S': 1, 'E-U': 1,
+  'F-I': 2, 'F-M': 1, 'F-R': 2, 'F-S': 2, 'F-U': 1,
+  'I-M': 2, 'I-R': 2, 'I-S': 2, 'I-U': 2,
+  'M-R': 1, 'M-S': 1, 'M-U': 1,
+  'R-S': 1, 'R-U': 1,
+  'S-U': 1,
+};
+
+// Table 1607.1 Live loads (psf) and concentrated (lbs)
+const LIVE_LOADS = {
+  'A-1': {load:60, conc:1000, note:'Fixed seats (theaters)'},
+  'A-2': {load:100, conc:1000, note:'Restaurants, lobbies'},
+  'A-3': {load:100, conc:1000, note:'Auditoriums, gymnasiums'},
+  'A-4': {load:60, conc:1000, note:'Sports facilities with fixed seating'},
+  'A-5': {load:100, conc:1000, note:'Bleachers, grandstands'},
+  'B':   {load:50, conc:2000, note:'Offices, general use'},
+  'E':   {load:40, conc:1000, note:'Classrooms'},
+  'F-1': {load:125, conc:2000, note:'Manufacturing, light'},
+  'F-2': {load:125, conc:2000, note:'Manufacturing, heavy'},
+  'M':   {load:125, conc:1000, note:'Retail, first floor'},
+  'R-1': {load:40, conc:300, note:'Hotel guest rooms'},
+  'R-2': {load:40, conc:300, note:'Apartment units'},
+  'R-3': {load:40, conc:300, note:'Dwellings'},
+  'S-1': {load:125, conc:2000, note:'Light storage'},
+  'S-2': {load:125, conc:2000, note:'Heavy storage'},
+  'U':   {load:40, conc:300, note:'Utility/miscellaneous'},
+  'Parking':{load:40, conc:3000, note:'Parking garage (passenger vehicles)'},
+  'H-1': {load:125, conc:2500, note:'High-hazard'},
+  'H-2': {load:125, conc:2500, note:'High-hazard'},
+  'H-3': {load:125, conc:2500, note:'High-hazard'},
+  'H-4': {load:125, conc:2500, note:'High-hazard'},
+  'H-5': {load:125, conc:2500, note:'High-hazard'},
+  'I-1': {load:40, conc:1000, note:'Residential care/assisted living'},
+  'I-2': {load:40, conc:1000, note:'Hospitals'},
+  'I-3': {load:40, conc:1000, note:'Jails/prisons'},
+  'I-4': {load:40, conc:1000, note:'Daycare'},
+};
+
+// §1705 Special Inspections categories
+const SPECIAL_INSP = [
+  {id:'si1', section:'§1705.2', label:'Concrete', note:'Special inspections for concrete — cast-in-place, prestressed, precast'},
+  {id:'si2', section:'§1705.3', label:'Masonry', note:'Special inspections for masonry — empirical, engineered, AAC'},
+  {id:'si3', section:'§1705.4', label:'Steel', note:'Structural steel — fabrication, erection, welding, bolting'},
+  {id:'si4', section:'§1705.5', label:'Wood', note:'High-load diaphragms, metal-plate-connected wood trusses'},
+  {id:'si5', section:'§1705.6', label:'Soils', note:'Controlled fill, pile driving, pier drilling'},
+  {id:'si6', section:'§1705.7', label:'Deep foundations', note:'Driven piles, cast-in-place piles, helical piles'},
+  {id:'si7', section:'§1705.8', label:'Helical piles', note:'Installation torque and final depth monitoring'},
+  {id:'si8', section:'§1705.9', label:'Post-installed anchors', note:'Adhesive anchors in sustained tension, cracked concrete'},
+  {id:'si9', section:'§1705.10', label:'Seismic', note:'Seismic design categories C–F additional requirements'},
+  {id:'si10', section:'§1705.11', label:'Wind', note:'Wind design categories II–IV in high-wind regions'},
+  {id:'si11', section:'§1705.12', label:'Sprayed fire-resistive materials', note:'SFRM thickness, density, bond strength per listing'},
+  {id:'si12', section:'§1705.13', label:'Exterior insulation and finish (EIFS)', note:'Water-resistive barrier, mesh embedment, drainage'},
+  {id:'si13', section:'§1705.14', label:'Mastic/intumescent fire-resistive coatings', note:'Spray-applied fire-resistive coatings on structural steel'},
+  {id:'si14', section:'§1705.15', label:'Smoke control', note:'Smoke control systems — commissioning, pressure test'},
+  {id:'si15', section:'§1705.16', label:'Mechanical systems (seismic/wind)', note:'HVAC units, seismic restraint per ASCE 7'},
+  {id:'si16', section:'§1705.17', label:'Architectural component attachments', note:'Seismic design category D–F component anchorage'},
+  {id:'si17', section:'§1705.18', label:'Deferred submittals', note:'List items approved for deferred submittal (shop drawings, MEs)'},
+];
+
+// =========================================================
+// CODE TABLES — IRC
+// =========================================================
+const ENERGY_DATA = {
+  // [zone]: {insul2018, insul2021, wall2018, wall2021, window2018, window2021, ceiling2018, ceiling2021}
+  '2': {ceil18:'R-30', ceil21:'R-38', wall18:'R-13', wall21:'R-13+5', win18:'0.40', win21:'0.32', floor18:'R-13', floor21:'R-13'},
+  '3': {ceil18:'R-38', ceil21:'R-49', wall18:'R-20 or R-13+5', wall21:'R-20+5', win18:'0.30', win21:'0.27', floor18:'R-19', floor21:'R-19'},
+  '4': {ceil18:'R-49', ceil21:'R-49', wall18:'R-20+5 or R-13+10', wall21:'R-20+10', win18:'0.30', win21:'0.27', floor18:'R-19', floor21:'R-30'},
+  '5': {ceil18:'R-49', ceil21:'R-60', wall18:'R-20+5 or R-13+10', wall21:'R-20+10', win18:'0.27', win21:'0.27', floor18:'R-30', floor21:'R-30'},
+  '6': {ceil18:'R-49', ceil21:'R-60', wall18:'R-20+5 or R-15+5', wall21:'R-20+10', win18:'0.27', win21:'0.27', floor18:'R-30', floor21:'R-30'},
+};
+
+// =========================================================
+// NAVIGATION
+// =========================================================
+function selectCode(code){
+  state.code = code;
+  document.querySelectorAll('.code-btn').forEach(b => b.classList.remove('selected'));
+  document.getElementById('btn-'+code).classList.add('selected');
+  document.getElementById('start-btn').disabled = false;
+}
+
+function startWorkbook(){
+  if(!state.code) return;
+  state.currentStep = 1;
+  state.completedSteps = [];
+  state.results = {};
+  state.floors = [];
+  document.getElementById('code-selector-section').style.display = 'none';
+  document.getElementById('workbook').style.display = 'block';
+  document.getElementById('progress-code-label').textContent = state.code.replace('IBC','IBC ').replace('IRC','IRC ');
+  updateProgress();
+  renderStep(1);
+}
+
+function restartWorkbook(){
+  state.code = null;
+  state.currentStep = 1;
+  state.completedSteps = [];
+  state.results = {};
+  state.floors = [];
+  document.querySelectorAll('.code-btn').forEach(b => b.classList.remove('selected'));
+  document.getElementById('start-btn').disabled = true;
+  document.getElementById('workbook').style.display = 'none';
+  document.getElementById('code-selector-section').style.display = 'block';
+  window.scrollTo(0,0);
+}
+
+function updateProgress(){
+  const total = 10;
+  const step = state.currentStep;
+  const pct = Math.round((step / total) * 100);
+  document.getElementById('progress-fill').style.width = pct + '%';
+  document.getElementById('progress-label').textContent = 'Step ' + step + ' of ' + total;
+  const dots = document.getElementById('step-dots');
+  dots.innerHTML = '';
+  for(let i=1;i<=total;i++){
+    const d = document.createElement('div');
+    d.className = 'step-dot ' + (state.completedSteps.includes(i) ? 'done' : i===step ? 'active' : 'locked');
+    d.textContent = i;
+    dots.appendChild(d);
+  }
+}
+
+function goToStep(n){
+  if(n < 1 || n > 10) return;
+  if(n > 1 && !state.completedSteps.includes(n-1)) return;
+  state.currentStep = n;
+  updateProgress();
+  renderStep(n);
+  window.scrollTo({top:document.getElementById('step-container').getBoundingClientRect().top + window.scrollY - 20, behavior:'smooth'});
+}
+
+function prevStep(){ goToStep(state.currentStep - 1); }
+
+function completeStep(n, data){
+  if(!state.completedSteps.includes(n)) state.completedSteps.push(n);
+  state.results[n] = data;
+  if(n === 10){
+    renderFinalSummary();
+  } else {
+    goToStep(n+1);
+  }
+}
+
+function renderStep(n){
+  if(isIBC()) renderIBCStep(n);
+  else renderIRCStep(n);
+}
+
+// =========================================================
+// HELPER BUILDERS
+// =========================================================
+function stepCard(num, ref, title, questionHTML, refHTML, bodyHTML){
+  return `<div class="step-card">
+    <div class="step-header">
+      <div class="step-num${state.completedSteps.includes(num)?' done':''}">${num}</div>
+      <div class="step-title">
+        <h2>${title}</h2>
+        <div class="step-ref">${ref}</div>
+      </div>
+    </div>
+    <div class="step-body">
+      <div class="q-block"><p>${questionHTML}</p></div>
+      <div class="ref-block"><strong>📖 How to find this in the code book</strong><p>${refHTML}</p></div>
+      ${bodyHTML}
+    </div>
+  </div>`;
+}
+
+function pill(type, text){ return `<span class="pill ${type}">${text}</span>`; }
+
+function occGroupFromFloor(occ){
+  // Map specific occupancy to group for table lookups
+  if(occ.startsWith('A')) return 'A';
+  if(occ.startsWith('F')) return 'F';
+  if(occ.startsWith('H')) return 'H';
+  if(occ.startsWith('I')) return 'I';
+  if(occ.startsWith('R')) return 'R';
+  if(occ.startsWith('S')) return 'S';
+  return occ;
+}
+
+function getSepHours(g1, g2){
+  if(g1 === g2) return 0;
+  const a = occGroupFromFloor(g1), b = occGroupFromFloor(g2);
+  if(a === b) return 0;
+  const sorted = [a,b].sort();
+  const key = sorted[0]+'-'+sorted[1];
+  return SEP_TABLE[key] || 1;
+}
+
+// =========================================================
+// IBC STEPS
+// =========================================================
+function renderIBCStep(n){
+  const fns = [null, ibcStep1, ibcStep2, ibcStep3, ibcStep4, ibcStep5, ibcStep6, ibcStep7, ibcStep8, ibcStep9, ibcStep10];
+  const html = fns[n] ? fns[n]() : '<p>Step coming soon</p>';
+  document.getElementById('step-container').innerHTML = html;
+  bindIBCStep(n);
+}
+
+// ---- IBC STEP 1: Project info + floor schedule ----
+function ibcStep1(){
+  const floors = state.floors.length ? state.floors : [];
+  const year = codeYear();
+  let floorRows = floors.map((f,i) => floorRow(f,i)).join('');
+  return stepCard(1,
+    `IBC ${year} §101 · Table 302.1 Occupancy Classification`,
+    'Project Information & Floor Schedule',
+    '<strong>What are we determining?</strong> Establish the project name, location, number of stories, gross floor area per story, and occupancy use group for each floor. The occupancy use group controls which code tables apply to height, area, occupant load, and fire protection.',
+    `Find <strong>Table 302.1</strong> in Chapter 3 of the IBC — it lists all occupancy groups from A (Assembly) to U (Utility). Identify the primary use of each floor and note the group letter. If a floor has multiple uses, determine whether §508 mixed occupancy provisions apply.`,
+    `<div class="form-row">
+      <div class="form-group"><label>Project Name</label><input type="text" id="proj-name" value="${state.projectName||''}" placeholder="e.g. Maple Street Mixed-Use"></div>
+      <div class="form-group"><label>City / Jurisdiction</label><input type="text" id="proj-city" value="${state.projectCity||''}" placeholder="e.g. Austin, TX"></div>
+    </div>
+    <span class="section-label">Floor Schedule (up to 9 floors)</span>
+    <div class="floor-table-wrap">
+      <table class="floor-tbl" id="floor-tbl">
+        <thead><tr><th>Floor / Level</th><th>Occupancy Group</th><th>Gross Area (sf)</th><th>Height Above Grade (ft)</th><th></th></tr></thead>
+        <tbody id="floor-tbody">${floorRows}</tbody>
+      </table>
+    </div>
+    <button class="add-floor-btn" onclick="addFloor()" id="add-floor-btn">+ Add Floor</button>
+    <p class="tbl-note mt8">Enter each floor from ground up. "Height above grade" = height of floor assembly above grade plane.</p>
+    <div class="btn-row">
+      <button class="btn-primary" onclick="ibcStep1Confirm()">Confirm Project Info →</button>
+    </div>`
+  );
+}
+
+function floorRow(f, i){
+  const occs = ['A-1','A-2','A-3','A-4','A-5','B','E','F-1','F-2','H-1','H-2','H-3','H-4','H-5','I-1','I-2','I-3','I-4','M','R-1','R-2','R-3','R-4','S-1','S-2','U','Parking'];
+  const optStr = occs.map(o => `<option value="${o}"${f&&f.occ===o?' selected':''}>${o}</option>`).join('');
+  const lvlName = i === 0 ? 'Ground (L1)' : i === 1 ? 'Level 2' : i === 2 ? 'Level 3' : i === 3 ? 'Level 4' : i === 4 ? 'Level 5' : i === 5 ? 'Level 6' : i === 6 ? 'Level 7' : i === 7 ? 'Level 8' : 'Level 9';
+  return `<tr id="floor-row-${i}">
+    <td style="color:var(--text2);font-weight:500;white-space:nowrap">${lvlName}</td>
+    <td><select onchange="updateFloor(${i},'occ',this.value)">${optStr}</select></td>
+    <td><input type="number" min="0" step="100" placeholder="e.g. 5000" value="${f&&f.area||''}" onchange="updateFloor(${i},'area',parseFloat(this.value)||0)"></td>
+    <td><input type="number" min="0" step="1" placeholder="e.g. 0" value="${f&&f.ht||''}" onchange="updateFloor(${i},'ht',parseFloat(this.value)||0)"></td>
+    <td><button class="del-btn" onclick="deleteFloor(${i})">Remove</button></td>
+  </tr>`;
+}
+
+function bindIBCStep(n){
+  // nothing extra needed after render for most steps
+}
+
+function addFloor(){
+  if(state.floors.length >= 9) return;
+  state.floors.push({occ:'B', area:0, ht:0});
+  // Re-render just the table body
+  const tbody = document.getElementById('floor-tbody');
+  if(tbody){
+    tbody.innerHTML = state.floors.map((f,i)=>floorRow(f,i)).join('');
+  }
+  if(state.floors.length >= 9) document.getElementById('add-floor-btn').style.display='none';
+}
+
+function deleteFloor(i){
+  state.floors.splice(i,1);
+  const tbody = document.getElementById('floor-tbody');
+  if(tbody) tbody.innerHTML = state.floors.map((f,idx)=>floorRow(f,idx)).join('');
+  const btn = document.getElementById('add-floor-btn');
+  if(btn) btn.style.display = state.floors.length < 9 ? '' : 'none';
+}
+
+function updateFloor(i, field, val){
+  if(!state.floors[i]) return;
+  state.floors[i][field] = val;
+}
+
+function ibcStep1Confirm(){
+  const name = document.getElementById('proj-name').value.trim();
+  const city = document.getElementById('proj-city').value.trim();
+  // sync floor values from DOM before saving
+  state.floors.forEach((f,i)=>{
+    const row = document.getElementById('floor-row-'+i);
+    if(!row) return;
+    const sel = row.querySelector('select');
+    const inputs = row.querySelectorAll('input');
+    if(sel) f.occ = sel.value;
+    if(inputs[0]) f.area = parseFloat(inputs[0].value)||0;
+    if(inputs[1]) f.ht = parseFloat(inputs[1].value)||0;
+  });
+  if(!name){ alert('Please enter a project name.'); return; }
+  if(state.floors.length === 0){ alert('Please add at least one floor.'); return; }
+  const hasArea = state.floors.some(f=>f.area>0);
+  if(!hasArea){ alert('Please enter gross area for at least one floor.'); return; }
+  state.projectName = name;
+  state.projectCity = city;
+  completeStep(1, {name, city, floors: JSON.parse(JSON.stringify(state.floors))});
+}
+
+// ---- IBC STEP 2: Construction Type ----
+function ibcStep2(){
+  const year = codeYear();
+  const rows = Object.entries(CONST_TYPES).map(([k,v])=>{
+    const isNew2021 = ['IVA','IVB','IVC'].includes(k);
+    const show = year===2021 || !isNew2021;
+    if(!show) return '';
+    const sel = state.constType === k;
+    return `<tr class="${sel?'selected-row':''}" style="cursor:pointer${sel?';background:var(--accent-bg)':''}" onclick="selectConstType('${k}')">
+      <td><input type="radio" name="ctype" value="${k}" ${sel?'checked':''} onchange="selectConstType('${k}')"></td>
+      <td style="font-weight:600">${v.label}</td>
+      <td>${v.str[0]}</td>
+      <td>${v.str[1]}</td>
+      <td>${v.str[2]}</td>
+      <td>${v.str[3]}</td>
+      <td>${v.htNS} ft</td>
+      <td>${v.note}</td>
+    </tr>`;
+  }).join('');
+
+  const ivNote = year === 2021 ? '<p class="tbl-note">* Types IV-A, IV-B, IV-C are new in IBC 2021 for mass timber construction.</p>' : '';
+
+  return stepCard(2,
+    `IBC ${year} Table 601 — Construction Type Fire-Resistance Ratings`,
+    'Construction Type Selection',
+    '<strong>What are we determining?</strong> The construction type defines fire-resistance requirements for all structural elements. It controls the maximum allowable height, stories, and area in Table 504 and 506. Select the construction type that matches the structural system and materials proposed for this building.',
+    `Open IBC Chapter 6. <strong>Table 601</strong> is on the first page and shows fire-resistance ratings (in hours) for each type. <strong>Table 602</strong> shows exterior wall ratings by fire separation distance. Type I and II are noncombustible; Type III has noncombustible exterior and combustible interior; Type IV is heavy timber or mass timber; Type V is fully combustible.`,
+    `<div class="results-tbl-wrap">
+      <table class="res-tbl">
+        <thead><tr>
+          <th style="width:36px"></th>
+          <th>Type</th>
+          <th title="Table 601: Structural frame">Frame (hr)</th>
+          <th title="Table 601: Exterior bearing walls">Ext Walls (hr)</th>
+          <th title="Table 601: Interior bearing walls">Int Walls (hr)</th>
+          <th title="Table 601: Floor construction">Floor (hr)</th>
+          <th>Max Ht (Unsprinklered)</th>
+          <th>System</th>
+        </tr></thead>
+        <tbody id="ctype-tbody">${rows}</tbody>
+      </table>
+    </div>
+    ${ivNote}
+    <div class="btn-row">
+      <button class="btn-secondary" onclick="prevStep()">← Back</button>
+      <button class="btn-primary" onclick="ibcStep2Confirm()">Confirm Construction Type →</button>
+    </div>`
+  );
+}
+
+function selectConstType(k){
+  state.constType = k;
+  document.querySelectorAll('#ctype-tbody tr').forEach(r=>{
+    const v = r.querySelector('input[name=ctype]');
+    if(v){
+      const sel = v.value === k;
+      r.style.background = sel ? 'var(--accent-bg)' : '';
+      if(v) v.checked = sel;
+    }
+  });
+}
+
+function ibcStep2Confirm(){
+  if(!state.constType){ alert('Please select a construction type.'); return; }
+  completeStep(2, {constType: state.constType, label: CONST_TYPES[state.constType].label});
+}
+
+// ---- IBC STEP 3: Height & Area Check ----
+function ibcStep3(){
+  const year = codeYear();
+  if(!state.constType || state.floors.length === 0){
+    return '<div class="step-locked-msg"><p>Complete steps 1–2 first.</p></div>';
+  }
+  const ct = CONST_TYPES[state.constType];
+  const numStories = state.floors.length;
+  const maxHtFt = state.floors.reduce((mx,f)=>Math.max(mx,f.ht),0);
+  const totalArea = state.floors.reduce((s,f)=>s+(f.area||0),0);
+  const maxAreaPerFloor = Math.max(...state.floors.map(f=>f.area||0));
+  const spr = state.sprinklered;
+
+  // Determine limiting occupancy
+  const occs = [...new Set(state.floors.map(f=>f.occ))];
+
+  let tableRows = '';
+  let anyFail = false;
+  occs.forEach(occ=>{
+    const lim = OCC_LIMITS[occ];
+    if(!lim) return;
+    const allowStories = spr ? lim[2] : lim[0];
+    const allowHt = spr ? lim[4] : lim[3];
+    const allowArea = spr ? lim[6]*3 : lim[5]; // §506.3 ×3 if sprinklered
+    const stPass = allowStories === null || numStories <= allowStories;
+    const htPass = allowHt === null || maxHtFt <= allowHt;
+    const arPass = allowArea === null || maxAreaPerFloor <= allowArea;
+    if(!stPass||!htPass||!arPass) anyFail = true;
+    const stPill = pill(stPass?'pass':'fail', numStories + ' / ' + (allowStories||'—'));
+    const htPill = pill(htPass?'pass':'fail', maxHtFt.toFixed(0)+'ft / '+(allowHt||'—')+'ft');
+    const arPill = pill(arPass?'pass':'fail', maxAreaPerFloor.toLocaleString()+' / '+(allowArea?allowArea.toLocaleString():'—')+' sf');
+    tableRows += `<tr><td style="font-weight:600">${occ}</td><td>${stPill}</td><td>${htPill}</td><td>${arPill}</td></tr>`;
+  });
+
+  const sprMult = spr ? ' (×3 sprinkler multiplier per §506.3 applied)' : ' (no sprinkler multiplier)';
+  const overall = anyFail ? pill('fail','EXCEEDS LIMITS') : pill('pass','WITHIN LIMITS');
+
+  return stepCard(3,
+    `IBC ${year} Tables 504.3, 504.4, 506.2 · §506.3`,
+    'Height & Area Check',
+    '<strong>What are we determining?</strong> Verify that the proposed building height (in stories and feet) and the floor area per story do not exceed the allowable limits for each occupancy group and the selected construction type. The most restrictive occupancy governs.',
+    `Tables <strong>504.3</strong> (stories), <strong>504.4</strong> (height in feet), and <strong>506.2</strong> (area per story) are in Chapter 5. Find your construction type column and occupancy row. Per <strong>§506.3</strong>, if the building is fully sprinklered per NFPA 13, each value in Table 506.2 is multiplied by 3. For mixed occupancies, apply the most restrictive occupancy group limits.`,
+    `<div class="result-box info"><p><strong>Construction Type:</strong> ${ct.label} | <strong>Stories:</strong> ${numStories} | <strong>Max Floor Ht:</strong> ${maxHtFt} ft | <strong>Max Floor Area:</strong> ${maxAreaPerFloor.toLocaleString()} sf${sprMult}</p></div>
+    <div class="results-tbl-wrap">
+      <table class="res-tbl">
+        <thead><tr><th>Occupancy</th><th>Stories (actual/allowed)</th><th>Height ft (actual/allowed)</th><th>Area/floor sf (actual/allowed)</th></tr></thead>
+        <tbody>${tableRows}</tbody>
+      </table>
+    </div>
+    <div class="result-box ${anyFail?'fail':'pass'}"><p><strong>Overall Result:</strong> ${overall.replace(/class="pill [^"]*"/,'')} ${anyFail?'Building EXCEEDS allowable height/area limits for construction type. Increase type, add sprinklers, or reduce building.':'All occupancy groups are within allowable height and area for '+ct.label+'.'}</p></div>
+    <p class="tbl-note">Note: Table values shown are for sprinklered (S) condition when sprinklers selected. Sprinkler selection confirmed in Step 4.</p>
+    <div class="btn-row">
+      <button class="btn-secondary" onclick="prevStep()">← Back</button>
+      <button class="btn-primary" onclick="completeStep(3, {pass: ${!anyFail}})">Confirm →</button>
+    </div>`
+  );
+}
+
+// ---- IBC STEP 4: Sprinkler Triggers ----
+function ibcStep4(){
+  const year = codeYear();
+  const numStories = state.floors.length;
+  const maxHtFt = state.floors.reduce((mx,f)=>Math.max(mx,f.ht),0);
+  const hasAssemblyAbove = state.floors.some((f,i)=> i>0 && f.occ.startsWith('A'));
+  const hasR2 = state.floors.some(f=>f.occ==='R-2');
+  const totalArea = state.floors.reduce((s,f)=>s+(f.area||0),0);
+  const largestFloor = Math.max(...state.floors.map(f=>f.area||0));
+
+  const triggers = [
+    {id:'t1', ref:'§903.2.1.1', label:'Assembly occupancy (A-1/A-2) fire area > 5,000 sf', triggered: state.floors.some(f=>['A-1','A-2'].includes(f.occ)&&f.area>5000)},
+    {id:'t2', ref:'§903.2.1.2', label:'Assembly occupancy above or below grade plane (A-1/A-2/A-3/A-4)', triggered: state.floors.some((f,i)=>f.occ.startsWith('A')&&i>0)},
+    {id:'t3', ref:'§903.2.1.3', label:'Night clubs or Group A occupancy > 1,000 persons', triggered: false},
+    {id:'t4', ref:'§903.2.6', label:'Building height > 55 ft above lowest level of fire dept access', triggered: maxHtFt > 55},
+    {id:'t5', ref:'§903.2.8', label:'Group R-2, 4 or more stories above grade', triggered: hasR2 && numStories >= 4},
+    {id:'t6', ref:'§903.2.11.3', label:'High-rise building (height > 75 ft)', triggered: maxHtFt > 75},
+    {id:'t7', ref:'§903.2.9', label:'Group S-1 with 3+ stories or > 100,000 sf', triggered: state.floors.some(f=>f.occ==='S-1') && (numStories>=3||totalArea>100000)},
+    {id:'t8', ref:'§903.2.11', label:'3 or more stories in building with Group A or E', triggered: numStories >= 3 && state.floors.some(f=>['A-1','A-2','A-3','A-4','E'].includes(f.occ))},
+  ];
+
+  const autoRequired = triggers.some(t=>t.triggered);
+  if(autoRequired) state.sprinklered = true;
+
+  const trigRows = triggers.map(t=>
+    `<tr><td style="white-space:nowrap;font-size:12px;color:var(--accent)">${t.ref}</td><td>${t.label}</td><td>${pill(t.triggered?'warn':'neutral', t.triggered?'TRIGGER':'not triggered')}</td></tr>`
+  ).join('');
+
+  return stepCard(4,
+    `IBC ${year} §903.2 — Automatic Sprinkler Systems`,
+    'Sprinkler System Triggers',
+    '<strong>What are we determining?</strong> Determine whether §903.2 mandates an automatic fire sprinkler system. Multiple triggering conditions are evaluated based on the floor schedule. If any trigger applies, sprinklers are required. If none apply, the designer may choose whether to provide them.',
+    `Chapter 9 contains fire protection systems. <strong>§903.2</strong> lists specific occupancy-based triggers. Check each subsection against the building characteristics. Also note: §903.2.11.3 requires full sprinklers in high-rises (> 75 ft). Your AHJ may have local amendments adding additional triggers.`,
+    `<div class="results-tbl-wrap"><table class="res-tbl">
+      <thead><tr><th>Section</th><th>Trigger Condition</th><th>Status</th></tr></thead>
+      <tbody>${trigRows}</tbody>
+    </table></div>
+    <div class="result-box ${autoRequired?'fail':'info'}"><p><strong>${autoRequired?'Sprinklers Required: One or more §903.2 triggers apply.':'No automatic triggers found for this building configuration.'}</strong></p></div>
+    <span class="section-label">Sprinkler Decision</span>
+    <div class="radio-group" id="spr-group">
+      <div class="radio-option${state.sprinklered?' selected':''}" onclick="setSprinkler(true)"><input type="radio" name="spr" value="yes" ${state.sprinklered?'checked':''}><label>Yes — Building will be sprinklered (NFPA 13)<small>Provides §506.3 area multiplier × 3 and height/story increases</small></label></div>
+      <div class="radio-option${!state.sprinklered?' selected':''}" onclick="setSprinkler(false)"><input type="radio" name="spr" value="no" ${!state.sprinklered?'checked':''}><label>No — Building will NOT be sprinklered${autoRequired?'<small style="color:var(--fail)">⚠ Required by §903.2 — AHJ variance required to omit</small>':''}</label></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn-secondary" onclick="prevStep()">← Back</button>
+      <button class="btn-primary" onclick="completeStep(4, {sprinklered: state.sprinklered})">Confirm Sprinkler Status →</button>
+    </div>`
+  );
+}
+
+function setSprinkler(val){
+  state.sprinklered = val;
+  document.querySelectorAll('#spr-group .radio-option').forEach((el,i)=>{
+    el.classList.toggle('selected', i===(val?0:1));
+    el.querySelector('input').checked = i===(val?0:1);
+  });
+}
+
+// ---- IBC STEP 5: Occupant Load ----
+function ibcStep5(){
+  const year = codeYear();
+  let rows = '';
+  let totalOcc = 0;
+  state.floors.forEach((f,i)=>{
+    const lf = OCC_LOAD[f.occ];
+    if(!lf) return;
+    const factor = lf[0];
+    const isGross = lf[1];
+    const occ = Math.ceil((f.area||0) / factor);
+    totalOcc += occ;
+    const lvl = ['Ground (L1)','Level 2','Level 3','Level 4','Level 5','Level 6','Level 7','Level 8','Level 9'][i]||'Level '+(i+1);
+    rows += `<tr>
+      <td>${lvl}</td>
+      <td style="font-weight:600">${f.occ}</td>
+      <td>${(f.area||0).toLocaleString()} sf</td>
+      <td>${factor} sf/person <span class="inline-badge" style="background:var(--info-bg);color:var(--info);border:1px solid var(--info-border)">${isGross?'gross':'net'}</span></td>
+      <td style="font-weight:600">${occ} persons</td>
+    </tr>`;
+  });
+  return stepCard(5,
+    `IBC ${year} Table 1004.5 — Occupant Load`,
+    'Occupant Load per Floor',
+    '<strong>What are we determining?</strong> Calculate the occupant load for each floor using Table 1004.5 load factors. The occupant load drives the number of required exits, exit width, and egress capacity calculations in Steps 6 and 7.',
+    `<strong>Table 1004.5</strong> is in Chapter 10. Find the occupancy use in the left column and read the load factor (sf per person). Divide gross floor area by the factor. Note whether the factor applies to gross or net area — gross includes all floor area; net excludes walls, columns, and fixed equipment. Use gross unless you have measured net.`,
+    `<div class="results-tbl-wrap"><table class="res-tbl">
+      <thead><tr><th>Level</th><th>Occupancy</th><th>Gross Area</th><th>Table 1004.5 Factor</th><th>Occupant Load</th></tr></thead>
+      <tbody>${rows}</tbody>
+      <tfoot><tr><td colspan="4" style="font-weight:600;text-align:right;padding:10px 12px">Total Building Occupant Load:</td><td style="font-weight:700;font-size:15px;padding:10px 12px">${totalOcc} persons</td></tr></tfoot>
+    </table></div>
+    <p class="tbl-note">§1004.1.2: When occupancy type is not listed, use 1 person per 100 sf gross.</p>
+    <div class="btn-row">
+      <button class="btn-secondary" onclick="prevStep()">← Back</button>
+      <button class="btn-primary" onclick="completeStep(5, {totalOcc: ${totalOcc}})">Confirm Occupant Loads →</button>
+    </div>`
+  );
+}
+
+// ---- IBC STEP 6: Exits ----
+function ibcStep6(){
+  const year = codeYear();
+  const spr = state.sprinklered;
+  let rows = '';
+  state.floors.forEach((f,i)=>{
+    const lf = OCC_LOAD[f.occ];
+    const occ = lf ? Math.ceil((f.area||0)/lf[0]) : 0;
+    const group = occGroupFromFloor(f.occ);
+    const se = SINGLE_EXIT[group] || SINGLE_EXIT['B'];
+    const story = i+1;
+    const canSingle = occ <= se.maxOcc && story <= se.maxStory && (!se.sprOnly || spr);
+    const numExits = canSingle ? 1 : 2;
+    // §1005.1 exit width: 0.2 in/person (stair) or 0.15 in/person (other)
+    const stairWidth = Math.ceil(occ * 0.2);
+    const doorWidth = Math.ceil(occ * 0.15);
+    const lvl = ['Ground (L1)','Level 2','Level 3','Level 4','Level 5','Level 6','Level 7','Level 8','Level 9'][i]||'Level '+(i+1);
+    rows += `<tr>
+      <td>${lvl}</td>
+      <td>${f.occ}</td>
+      <td>${occ}</td>
+      <td style="font-weight:600">${numExits} exit${numExits>1?'s':''} ${pill(numExits===1?'info':'warn', numExits===1?'Single OK':'2 Required')}</td>
+      <td>${stairWidth}" min stair width</td>
+      <td>${doorWidth}" min door width</td>
+    </tr>`;
+  });
+  return stepCard(6,
+    `IBC ${year} Table 1006.3.4 · §1005.1 — Exits & Width`,
+    'Number of Exits & Exit Width',
+    '<strong>What are we determining?</strong> Determine how many exits are required per floor and the minimum required clear width. Table 1006.3.4 specifies when a single exit is permitted. §1005.1 provides the width formula: 0.2 inches per person for stairways, 0.15 inches per person for other egress components.',
+    `<strong>Table 1006.3.4</strong> in Chapter 10 lists the maximum occupant load and story height for a single exit. If either limit is exceeded, two exits are required. <strong>§1005.1</strong> gives width multipliers — multiply the floor's occupant load by the factor to get minimum clear width in inches.`,
+    `<div class="results-tbl-wrap"><table class="res-tbl">
+      <thead><tr><th>Level</th><th>Occupancy</th><th>Occ. Load</th><th>Exits Required</th><th>Min Stair Width</th><th>Min Door Width</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>
+    <p class="tbl-note">§1005.1: Width multiplier = 0.2 in/person for stairways; 0.15 in/person for doors/corridors. Minimum 36" clear width applies regardless.</p>
+    <div class="btn-row">
+      <button class="btn-secondary" onclick="prevStep()">← Back</button>
+      <button class="btn-primary" onclick="completeStep(6, {exits:true})">Confirm Exits →</button>
+    </div>`
+  );
+}
+
+// ---- IBC STEP 7: Travel Distance ----
+function ibcStep7(){
+  const year = codeYear();
+  const spr = state.sprinklered;
+  let rows = '';
+  state.floors.forEach((f,i)=>{
+    const grp = occGroupFromFloor(f.occ);
+    const td = TRAVEL_DIST[f.occ] || TRAVEL_DIST[grp] || [200,250];
+    const cp = COMMON_PATH[grp] || [75,100];
+    const allowTD = spr ? td[1] : td[0];
+    const allowCP = spr ? cp[1] : cp[0];
+    const lvl = ['Ground (L1)','Level 2','Level 3','Level 4','Level 5','Level 6','Level 7','Level 8','Level 9'][i]||'Level '+(i+1);
+    rows += `<tr>
+      <td>${lvl}</td>
+      <td>${f.occ}</td>
+      <td>${pill('info', allowTD+'ft max')}<br><small class="text-muted" style="font-size:11px">Table 1017.2</small></td>
+      <td>${pill('info', allowCP+'ft max')}<br><small class="text-muted" style="font-size:11px">§1006.2.1</small></td>
+      <td>${pill('info', spr?'20ft max':'20ft max')}<br><small class="text-muted" style="font-size:11px">§1020.4</small></td>
+    </tr>`;
+  });
+  return stepCard(7,
+    `IBC ${year} Table 1017.2 · §1006.2.1 · §1020.4`,
+    'Travel Distance & Common Path',
+    '<strong>What are we determining?</strong> Establish the maximum allowable travel distance (from any point to the nearest exit), common path of travel (shared portion before diverging), and dead-end corridor limits for each floor and occupancy. These must be verified in the architectural layout.',
+    `<strong>Table 1017.2</strong> in Chapter 10 lists travel distance limits by occupancy and sprinkler status. <strong>§1006.2.1</strong> (common path of travel) and <strong>§1020.4</strong> (dead ends) are in the same chapter. Measure travel distance along the actual walking path on floor plans — not straight-line. Higher values apply when the building is fully sprinklered per NFPA 13.`,
+    `<div class="results-tbl-wrap"><table class="res-tbl">
+      <thead><tr><th>Level</th><th>Occupancy</th><th>Max Travel Distance</th><th>Max Common Path</th><th>Max Dead End</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>
+    <div class="result-box info"><p><strong>Sprinkler status:</strong> ${spr?'Sprinklered — higher limits apply (Table 1017.2 "S" column)':'Unsprinklered — standard limits apply (Table 1017.2 "NS" column)'}</p></div>
+    <p class="tbl-note">Measure travel distance along the path of travel on the floor plan. Diagonal/shortcut measurements are not permitted.</p>
+    <div class="btn-row">
+      <button class="btn-secondary" onclick="prevStep()">← Back</button>
+      <button class="btn-primary" onclick="completeStep(7, {travel:true})">Confirm Travel Distances →</button>
+    </div>`
+  );
+}
+
+// ---- IBC STEP 8: Fire Separations ----
+function ibcStep8(){
+  const year = codeYear();
+  const occs = state.floors.map(f=>f.occ);
+  const unique = [...new Set(occs)];
+  let rows = '';
+  let pairs = [];
+  for(let a=0;a<unique.length;a++){
+    for(let b=a+1;b<unique.length;b++){
+      const hrs = getSepHours(unique[a], unique[b]);
+      pairs.push({a:unique[a],b:unique[b],hrs});
+    }
+  }
+  if(pairs.length === 0){
+    rows = `<tr><td colspan="4" style="text-align:center;color:var(--text2);padding:16px">Single occupancy — no mixed-occupancy separations required.</td></tr>`;
+  } else {
+    pairs.forEach(p=>{
+      const req = p.hrs > 0;
+      rows += `<tr>
+        <td style="font-weight:600">${p.a}</td>
+        <td style="font-weight:600">${p.b}</td>
+        <td>${pill(req?'warn':'pass', req?p.hrs+'hr separation':'None required')}</td>
+        <td style="font-size:12px;color:var(--text2)">${req?'Fire barrier per §707 or horizontal assembly per §711':'Accessory use or same group — §508.2/508.3'}</td>
+      </tr>`;
+    });
+  }
+  const wallRows = [
+    {el:'Fire barrier', section:'§707', desc:'Separates occupancy groups or fire areas — rated wall extending to deck above'},
+    {el:'Fire partition', section:'§708', desc:'Corridor walls, dwelling unit separation — does not extend to deck above required'},
+    {el:'Horizontal assembly', section:'§711', desc:'Fire-rated floor/ceiling assembly for vertical separation of occupancies'},
+    {el:'Shaft enclosure', section:'§713', desc:'Openings through floors — stairs, elevators, mechanical shafts'},
+  ].map(r=>`<tr><td style="font-weight:600;white-space:nowrap">${r.el}</td><td style="color:var(--accent);font-size:12px">${r.section}</td><td style="font-size:13px">${r.desc}</td></tr>`).join('');
+
+  return stepCard(8,
+    `IBC ${year} §508.4 Table 508.4 · §707 · §711`,
+    'Fire Separations — Mixed Occupancy',
+    '<strong>What are we determining?</strong> For buildings with more than one occupancy group, determine the required fire separation (in hours) between each pair of occupancies using Table 508.4 under the "Separated Occupancies" method. Separation is achieved with fire barriers (§707) or horizontal assemblies (§711).',
+    `<strong>Table 508.4</strong> is in Chapter 5 under "Mixed Occupancies." Find both occupancy groups and locate the intersection cell — the number is the required separation in hours. If the building uses the "Accessory Occupancy" (§508.2) or "Nonseparated Occupancies" (§508.3) method instead, separations may be reduced or eliminated, but the most restrictive occupancy then governs the entire building.`,
+    `<div class="results-tbl-wrap"><table class="res-tbl">
+      <thead><tr><th>Occupancy A</th><th>Occupancy B</th><th>Required Separation</th><th>Assembly Type</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>
+    <span class="section-label mt16">Fire-Resistance Assembly Reference</span>
+    <div class="results-tbl-wrap"><table class="res-tbl">
+      <thead><tr><th>Assembly Type</th><th>Section</th><th>Description</th></tr></thead>
+      <tbody>${wallRows}</tbody>
+    </table></div>
+    <div class="btn-row">
+      <button class="btn-secondary" onclick="prevStep()">← Back</button>
+      <button class="btn-primary" onclick="completeStep(8, {separations:true})">Confirm Fire Separations →</button>
+    </div>`
+  );
+}
+
+// ---- IBC STEP 9: Structural Live Loads ----
+function ibcStep9(){
+  const year = codeYear();
+  let rows = '';
+  const seen = new Set();
+  state.floors.forEach((f,i)=>{
+    if(seen.has(f.occ)) return;
+    seen.add(f.occ);
+    const ll = LIVE_LOADS[f.occ];
+    if(!ll) return;
+    rows += `<tr>
+      <td style="font-weight:600">${f.occ}</td>
+      <td>${ll.note}</td>
+      <td style="font-weight:600">${ll.load} psf</td>
+      <td>${ll.conc.toLocaleString()} lbs</td>
+    </tr>`;
+  });
+  return stepCard(9,
+    `IBC ${year} Table 1607.1 · Table 1607.8`,
+    'Structural Live Loads',
+    '<strong>What are we determining?</strong> Establish the minimum uniformly distributed live load (UDL in psf) and concentrated load (in lbs) for each occupancy on the floor schedule. These values are the minimum required by the IBC — the structural engineer may use higher values. Table 1607.8 provides guardrail live loads.',
+    `<strong>Table 1607.1</strong> is in Chapter 16 (Structural Design). Find the occupancy description in the left column and read across for the UDL (psf) and concentrated load (lbs). <strong>Table 1607.8</strong> gives guardrail and handrail loads — typically 200 lbs concentrated and 50 lbs/ft distributed for accessible routes. The structural engineer must also consider ASCE 7 for wind, snow, seismic, and other loads.`,
+    `<div class="results-tbl-wrap"><table class="res-tbl">
+      <thead><tr><th>Occupancy</th><th>Use Description</th><th>Min UDL (psf)</th><th>Min Concentrated Load</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>
+    <div class="result-box info">
+      <p><strong>Table 1607.8 — Guardrail/Handrail Loads:</strong> 200 lbs concentrated at top rail; 50 lbs/ft distributed. For accessible routes per §1607.8.1, post spacing must be verified by structural engineer.</p>
+    </div>
+    <p class="tbl-note">These are minimum code values. The structural engineer of record must perform full load analysis per ASCE 7-16/22 for dead, live, wind, seismic, and snow loads.</p>
+    <div class="btn-row">
+      <button class="btn-secondary" onclick="prevStep()">← Back</button>
+      <button class="btn-primary" onclick="completeStep(9, {liveLoads:true})">Confirm Live Loads →</button>
+    </div>`
+  );
+}
+
+// ---- IBC STEP 10: Special Inspections ----
+function ibcStep10(){
+  const year = codeYear();
+  const checkboxes = SPECIAL_INSP.map(si=>
+    `<div class="check-option" id="si-wrap-${si.id}" onclick="toggleSI('${si.id}')">
+      <input type="checkbox" id="${si.id}" onclick="event.stopPropagation();toggleSI('${si.id}')">
+      <label><strong style="font-size:13px">${si.section} — ${si.label}</strong><small>${si.note}</small></label>
+    </div>`
+  ).join('');
+
+  return stepCard(10,
+    `IBC ${year} §1705.2–§1705.18 — Special Inspections`,
+    'Special Inspections & Deferred Submittals',
+    '<strong>What are we determining?</strong> Identify which special inspection items from IBC Chapter 17 apply to this project. Special inspections are third-party quality-control inspections required during construction for specific materials and systems. The owner must retain a Special Inspector, and a Statement of Special Inspections must be submitted to the building department.',
+    `Chapter 17 contains all special inspection requirements. <strong>§1705.2 through §1705.18</strong> cover specific structural materials and systems. Review each section against the project scope and check all that apply. The registered design professional (architect/engineer) must prepare the <strong>Statement of Special Inspections</strong> per §1705.1.`,
+    `<span class="section-label">Check all special inspection categories that apply to this project:</span>
+    <div class="check-group" id="si-group">${checkboxes}</div>
+    <div class="result-box info" id="si-summary"><p>Check items above to build the special inspections list.</p></div>
+    <div class="btn-row">
+      <button class="btn-secondary" onclick="prevStep()">← Back</button>
+      <button class="btn-primary" onclick="ibcStep10Confirm()">Complete Workbook →</button>
+    </div>`
+  );
+}
+
+const selectedSI = new Set();
+function toggleSI(id){
+  const el = document.getElementById(id);
+  if(!el) return;
+  if(selectedSI.has(id)){
+    selectedSI.delete(id);
+    el.checked = false;
+    document.getElementById('si-wrap-'+id).classList.remove('selected');
+  } else {
+    selectedSI.add(id);
+    el.checked = true;
+    document.getElementById('si-wrap-'+id).classList.add('selected');
+  }
+  const count = selectedSI.size;
+  const summary = document.getElementById('si-summary');
+  if(summary){
+    if(count === 0){
+      summary.innerHTML = '<p>No special inspection items selected. If none apply, provide justification in the Statement of Special Inspections (§1705.1.1).</p>';
+      summary.className = 'result-box info';
+    } else {
+      const items = [...selectedSI].map(id=>SPECIAL_INSP.find(s=>s.id===id)).filter(Boolean).map(s=>s.label).join(', ');
+      summary.innerHTML = `<p><strong>${count} item${count>1?'s':''} selected:</strong> ${items}. Include these in the Statement of Special Inspections submitted with permit application.</p>`;
+      summary.className = 'result-box warn';
+    }
+  }
+}
+
+function ibcStep10Confirm(){
+  const items = [...selectedSI].map(id=>SPECIAL_INSP.find(s=>s.id===id)).filter(Boolean);
+  completeStep(10, {specialInsp: items.map(s=>s.label)});
+}
+
+// =========================================================
+// IRC STEPS
+// =========================================================
+function renderIRCStep(n){
+  const fns = [null, ircStep1, ircStep2, ircStep3, ircStep4, ircStep5, ircStep6, ircStep7, ircStep8, ircStep9, ircStep10];
+  const html = fns[n] ? fns[n]() : '<p>Step coming soon</p>';
+  document.getElementById('step-container').innerHTML = html;
+}
+
+function ircStep1(){
+  const year = codeYear();
+  return stepCard(1,
+    `IRC ${year} §R101 — Scope & Applicability`,
+    'Project Information & Dwelling Type',
+    '<strong>What are we determining?</strong> Establish the project details and confirm the structure falls within IRC scope. The IRC applies to one- and two-family dwellings and townhouses not more than 3 stories. Confirm dwelling type, number of stories, floor area, bedrooms, and associated features.',
+    `<strong>§R101.2</strong> defines the scope of the IRC. Townhouses may be covered by the IRC if 3 stories or fewer and separated by fire walls per §R302. For structures with more than 2 dwelling units or more than 3 stories, use the IBC instead. Verify jurisdiction adoption year and local amendments.`,
+    `<div class="form-row">
+      <div class="form-group"><label>Project Name</label><input type="text" id="irc-name" value="${state.projectName||''}" placeholder="e.g. Smith Residence"></div>
+      <div class="form-group"><label>City / Jurisdiction</label><input type="text" id="irc-city" value="${state.projectCity||''}" placeholder="e.g. Austin, TX"></div>
+    </div>
+    <span class="section-label">Dwelling Type</span>
+    <div class="radio-group" id="dtype-group">
+      ${['SFR — Single-Family Residence','Duplex — Two-Family Dwelling','Townhouse — §R302 fire wall separation'].map((label,i)=>{
+        const vals=['SFR','Duplex','Townhouse'];
+        const sel=state.dwellingType===vals[i];
+        return `<div class="radio-option${sel?' selected':''}" onclick="setDwellingType('${vals[i]}')"><input type="radio" name="dtype" value="${vals[i]}" ${sel?'checked':''}><label>${label}</label></div>`;
+      }).join('')}
+    </div>
+    <div class="form-row cols3">
+      <div class="form-group"><label>Stories Above Grade</label><select id="irc-stories"><option value="1">1</option><option value="2"${state.stories===2?' selected':''}>2</option><option value="3"${state.stories===3?' selected':''}>3</option></select></div>
+      <div class="form-group"><label>Conditioned Floor Area (sf)</label><input type="number" id="irc-area" value="${state.floorArea||''}" placeholder="e.g. 2400" min="0"></div>
+      <div class="form-group"><label>Bedrooms</label><select id="irc-beds">${[1,2,3,4,5,6].map(n=>`<option${state.bedrooms===n?' selected':''}>${n}</option>`).join('')}</select></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Full Bathrooms</label><select id="irc-baths">${[1,2,3,4,5].map(n=>`<option${state.bathrooms===n?' selected':''}>${n}</option>`).join('')}</select></div>
+      <div class="form-group"><label>Basement</label><select id="irc-basement"><option value="no"${!state.hasBasement?' selected':''}>No basement</option><option value="yes"${state.hasBasement?' selected':''}>Yes — has basement</option></select></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Attached Garage</label><select id="irc-garage"><option value="no"${!state.hasGarage?' selected':''}>No attached garage</option><option value="yes"${state.hasGarage?' selected':''}>Yes — attached garage</option></select></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn-primary" onclick="ircStep1Confirm()">Confirm Project Info →</button>
+    </div>`
+  );
+}
+
+function setDwellingType(v){
+  state.dwellingType = v;
+  document.querySelectorAll('#dtype-group .radio-option').forEach(el=>{
+    el.classList.toggle('selected', el.querySelector('input').value===v);
+    el.querySelector('input').checked = el.querySelector('input').value===v;
+  });
+}
+
+function ircStep1Confirm(){
+  const name = document.getElementById('irc-name').value.trim();
+  const city = document.getElementById('irc-city').value.trim();
+  if(!name){alert('Please enter a project name.');return;}
+  if(!state.dwellingType){alert('Please select a dwelling type.');return;}
+  state.projectName = name;
+  state.projectCity = city;
+  state.stories = parseInt(document.getElementById('irc-stories').value)||1;
+  state.floorArea = parseFloat(document.getElementById('irc-area').value)||0;
+  state.bedrooms = parseInt(document.getElementById('irc-beds').value)||2;
+  state.bathrooms = parseInt(document.getElementById('irc-baths').value)||1;
+  state.hasBasement = document.getElementById('irc-basement').value==='yes';
+  state.hasGarage = document.getElementById('irc-garage').value==='yes';
+  completeStep(1,{name,city,dwellingType:state.dwellingType,stories:state.stories});
+}
+
+function ircStep2(){
+  const year = codeYear();
+  const methods = [
+    {id:'prescriptive', label:'Prescriptive Framing (Chapters R502, R602, R802)', desc:'Wood-framed construction using IRC prescriptive span tables and rules. Most common for single-family homes.'},
+    {id:'conventional', label:'Conventional Light-Frame (§R602.10 Bracing)', desc:'Prescriptive framing with wall bracing per IRC Chapter 6 tables. Requires bracing method selection.'},
+    {id:'engineered', label:'Engineered Design (§R301.1.3)', desc:'Structural engineer designs framing per ASCE 7 and appropriate material standards. Required when IRC prescriptive limits are exceeded.'},
+  ];
+  const rows = [
+    {section:'R502', title:'Floor framing', desc:'Joist spans, headers, beams — Tables R502.3.1, R502.3.3'},
+    {section:'R602', title:'Wall framing', desc:'Stud spacing, height limits, header sizes — Tables R602.3, R602.7'},
+    {section:'R802', title:'Roof framing', desc:'Rafter spans, ridge beam, ceiling joists — Tables R802.4, R802.4.1'},
+  ].map(r=>`<tr><td style="color:var(--accent);font-weight:600">${r.section}</td><td style="font-weight:600">${r.title}</td><td style="font-size:13px">${r.desc}</td></tr>`).join('');
+
+  return stepCard(2,
+    `IRC ${year} Chapter 6 · R502, R602, R802`,
+    'Construction Method & Framing',
+    '<strong>What are we determining?</strong> Select the construction approach for the structure. The IRC provides prescriptive framing chapters (R502 floor, R602 wall, R802 roof) with span tables you can use directly without a structural engineer — provided the structure stays within the scope limitations of §R301.',
+    `Chapters <strong>R502</strong> (floor), <strong>R602</strong> (wall), and <strong>R802</strong> (roof) contain the prescriptive tables. To use them, find the span table for your lumber species, size, spacing, and live/dead load condition. If the project exceeds the table limits (e.g., spans too long, irregular shape, high seismic/wind), §R301.1.3 requires engineered design.`,
+    `<div class="radio-group">${methods.map(m=>`<div class="radio-option" onclick="this.parentElement.querySelectorAll('.radio-option').forEach(e=>e.classList.remove('selected'));this.classList.add('selected');this.querySelector('input').checked=true"><input type="radio" name="framing" value="${m.id}"><label><strong>${m.label}</strong><small>${m.desc}</small></label></div>`).join('')}</div>
+    <span class="section-label mt16">IRC Prescriptive Framing Chapters</span>
+    <div class="results-tbl-wrap"><table class="res-tbl">
+      <thead><tr><th>Chapter</th><th>Element</th><th>Key Tables</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>
+    <p class="tbl-note">Prescriptive limits: §R301.2 wind speed, snow load, and seismic SDC must be within IRC tabulated limits. Verify with your local jurisdiction.</p>
+    <div class="btn-row">
+      <button class="btn-secondary" onclick="prevStep()">← Back</button>
+      <button class="btn-primary" onclick="completeStep(2, {framing: document.querySelector('input[name=framing]:checked')?.value||\'prescriptive\'})">Confirm Framing Method →</button>
+    </div>`
+  );
+}
+
+function ircStep3(){
+  const year = codeYear();
+  const rows = [
+    {label:'Bedroom minimum area', req:'70 sf minimum', sec:'§R304.1', note:'One room must be ≥ 120 sf — IRC 2021 adds this requirement'},
+    {label:'Other habitable rooms', req:'70 sf minimum each', sec:'§R304.2', note:''},
+    {label:'Minimum width', req:'7 ft minimum', sec:'§R304.3', note:'Applies to any habitable room'},
+    {label:'Ceiling height — habitable', req:'7 ft minimum', sec:'§R305.1', note:'Hallways, bathrooms, kitchens: 6 ft 8 in min'},
+    {label:'Ceiling height — basement', req:'6 ft 8 in min (finished)', sec:'§R305.1', note:'6 ft min for unfinished basement'},
+    {label:'Glazing area — natural light', req:'8% of floor area', sec:'§R303.1', note:'Or artificial light providing 6 ft-candles at 30 in above floor'},
+    {label:'Ventilation — natural', req:'4% of floor area', sec:'§R303.1', note:'Or mechanical ventilation per §R303.3/M1505'},
+    {label:'Kitchen minimum width', req:'No minimum, but clear passage 36" min', sec:'§R303/P2705', note:''},
+    {label:'Bathroom ventilation', req:'50 cfm intermittent or 20 cfm continuous', sec:'§R303.3', note:'Or openable window ≥ 1.5 sf'},
+  ].map(r=>`<tr><td>${r.label}</td><td style="font-weight:600">${r.req}</td><td style="color:var(--accent);font-size:12px">${r.sec}</td><td style="font-size:12px;color:var(--text2)">${r.note}</td></tr>`).join('');
+
+  return stepCard(3,
+    `IRC ${year} §R303 · §R304 · §R305`,
+    'Room Sizes & Ceiling Heights',
+    '<strong>What are we determining?</strong> Verify that habitable rooms meet minimum area (§R304), width (§R304.3), and ceiling height (§R305) requirements. Also confirm that natural light (§R303.1) and ventilation (§R303.3) are provided for all habitable spaces.',
+    `Chapter 3 of the IRC covers planning. <strong>§R303</strong> covers light and ventilation — measure glazing as a percentage of floor area. <strong>§R304</strong> covers room area minimums — one room must be at least 120 sf (IRC 2021) or 70 sf (IRC 2018). <strong>§R305</strong> covers ceiling height — 7 ft for habitable rooms, 6 ft 8 in for hallways and bathrooms.`,
+    `<div class="results-tbl-wrap"><table class="res-tbl">
+      <thead><tr><th>Requirement</th><th>Minimum Standard</th><th>Section</th><th>Notes</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>
+    ${year===2021?'<div class="result-box warn"><p><strong>IRC 2021 Change:</strong> §R304.1 now requires that at least one habitable room have a minimum area of 120 sf (in addition to the 70 sf minimum for all rooms). This is new in 2021 — IRC 2018 had 120 sf as a recommendation only.</p></div>':''}
+    <div class="btn-row">
+      <button class="btn-secondary" onclick="prevStep()">← Back</button>
+      <button class="btn-primary" onclick="completeStep(3, {roomSizes:true})">Confirm Room Requirements →</button>
+    </div>`
+  );
+}
+
+function ircStep4(){
+  const year = codeYear();
+  const irc21 = year===2021;
+  const bedsArr = [];
+  for(let i=0;i<state.bedrooms;i++) bedsArr.push(i+1);
+  const smokeRows = [
+    {loc:'Each bedroom', req:'Required'},
+    {loc:'Outside each sleeping area (hallway)', req:'Required'},
+    {loc:'Each story including basement', req:'Required'},
+    {loc:'Combination alarm (smoke + CO)', req: irc21?'Permitted per §R314.3':'Permitted per §R314.3'},
+  ];
+  const coRows = [
+    {loc:'Outside each bedroom / sleeping area', req:'Required'},
+    {loc:'Each floor with fuel-burning appliance', req:'Required'},
+    {loc:'Attached garage (wall between garage and dwelling)', req:'Required'},
+  ];
+  const sprRow = irc21
+    ? 'IRC 2021 §R313.1 — Not required by IRC nationally, but many state/local amendments mandate. Check AHJ.'
+    : 'IRC 2018 §R313.1 — Not required by IRC nationally. AHJ may require by local amendment.';
+
+  return stepCard(4,
+    `IRC ${year} §R314 · §R315 · §R313`,
+    'Smoke Alarms, CO Alarms & Sprinklers',
+    '<strong>What are we determining?</strong> Establish the minimum locations for smoke alarms (§R314) and carbon monoxide alarms (§R315), and determine whether fire sprinklers (§R313) are required. Locations are per bedroom, sleeping area, and floor level.',
+    `<strong>§R314</strong> covers smoke alarms — required in each bedroom, outside each sleeping area, and on each story. <strong>§R315</strong> covers CO alarms — required on each floor with a fuel-burning appliance and outside sleeping areas. <strong>§R313</strong> covers sprinklers — the IRC does not nationally mandate residential sprinklers, but many jurisdictions adopt local amendments. Always check the AHJ.`,
+    `<span class="section-label">§R314 Smoke Alarm Locations</span>
+    <div class="results-tbl-wrap"><table class="res-tbl">
+      <thead><tr><th>Location</th><th>Requirement</th></tr></thead>
+      <tbody>${smokeRows.map(r=>`<tr><td>${r.loc}</td><td>${pill('warn', r.req)}</td></tr>`).join('')}</tbody>
+    </table></div>
+    <div class="result-box warn"><p><strong>Minimum count for this project:</strong> ${state.bedrooms} bedroom alarms + 1 hallway alarm + ${state.stories + (state.hasBasement?1:0)} story/basement alarm${state.stories>1?'s':''} = approximately <strong>${state.bedrooms + 1 + state.stories + (state.hasBasement?1:0)} smoke alarms</strong> minimum.</p></div>
+    <span class="section-label">§R315 Carbon Monoxide Alarm Locations</span>
+    <div class="results-tbl-wrap"><table class="res-tbl">
+      <thead><tr><th>Location</th><th>Requirement</th></tr></thead>
+      <tbody>${coRows.map(r=>`<tr><td>${r.loc}</td><td>${pill(state.hasGarage?'warn':'info', r.req+(state.hasGarage&&r.loc.includes('garage')?' — Garage present':''))}</td></tr>`).join('')}</tbody>
+    </table></div>
+    ${irc21?'<div class="result-box info"><p><strong>IRC 2021 §R315:</strong> CO alarms must be interconnected (hardwired or wireless) in new construction. Battery-only units are no longer permitted for new construction in IRC 2021.</p></div>':'<div class="result-box info"><p><strong>IRC 2018 §R315:</strong> CO alarms are required in new construction. Interconnection encouraged but not required by the IRC nationally.</p></div>'}
+    <span class="section-label">§R313 Fire Sprinklers</span>
+    <div class="result-box info"><p>${sprRow}</p></div>
+    <div class="btn-row">
+      <button class="btn-secondary" onclick="prevStep()">← Back</button>
+      <button class="btn-primary" onclick="completeStep(4, {alarms:true})">Confirm Alarms →</button>
+    </div>`
+  );
+}
+
+function ircStep5(){
+  const year = codeYear();
+  const locations = [];
+  for(let i=0;i<state.bedrooms;i++) locations.push('Bedroom '+(i+1));
+  if(state.hasBasement) locations.push('Basement');
+  const rows = locations.map(loc=>`<tr>
+    <td>${loc}</td>
+    <td>${pill('warn','Required §R310.1')}</td>
+    <td>Min. 5.7 sf net clear opening</td>
+    <td>Min. 24" height; 20" width</td>
+    <td>Max 44" sill height (from floor)</td>
+  </tr>`).join('');
+  return stepCard(5,
+    `IRC ${year} §R310 — Emergency Escape and Rescue Openings`,
+    'Emergency Escape and Rescue Openings (EEROs)',
+    '<strong>What are we determining?</strong> Every sleeping room and basement must have at least one emergency escape and rescue opening (EERO) — typically an operable window — that meets minimum size and sill height requirements per §R310.',
+    `<strong>§R310</strong> is in Chapter 3. The opening must provide at minimum: net clear opening area of 5.7 sf (5.0 sf for grade-floor openings), minimum 24 inches in height, minimum 20 inches in width, and maximum 44 inches from finished floor to the bottom of the opening. Bars and grilles must have interior release.`,
+    `<div class="results-tbl-wrap"><table class="res-tbl">
+      <thead><tr><th>Location</th><th>Required</th><th>Min Net Opening</th><th>Min Dimensions</th><th>Max Sill Height</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>
+    <div class="result-box warn"><p><strong>Total EEROs required: ${locations.length}</strong> — one per sleeping room and one in any basement. Verify window size meets net clear opening after frame deductions.</p></div>
+    <p class="tbl-note">§R310.2.1: Grade-floor openings (below grade) require min 5.0 sf net clear opening. Window wells may be required per §R310.2.3.</p>
+    <div class="btn-row">
+      <button class="btn-secondary" onclick="prevStep()">← Back</button>
+      <button class="btn-primary" onclick="completeStep(5, {eero:locations.length})">Confirm EEROs →</button>
+    </div>`
+  );
+}
+
+function ircStep6(){
+  const year = codeYear();
+  const rows = [
+    {item:'Riser height', req:'Max 7¾ in', min:'Min 4 in', sec:'§R311.7.5.1'},
+    {item:'Tread depth', req:'Min 10 in', min:'Min 10 in', sec:'§R311.7.5.2'},
+    {item:'Stair width', req:'Min 36 in clear', min:'Min 36 in', sec:'§R311.7.1'},
+    {item:'Headroom', req:'Min 6 ft 8 in', min:'Min 6 ft 8 in', sec:'§R311.7.2'},
+    {item:'Handrail height', req:'34–38 in', min:'One side required', sec:'§R311.7.8'},
+    {item:'Handrail graspability', req:'Graspable profile req.', min:'1¼–2 in diameter round', sec:'§R311.7.8.3'},
+    {item:'Nosing', req:'¾–1¼ in projection', min:'Solid risers', sec:'§R311.7.5.3'},
+    {item:'Vertical rise between landings', req:'Max 147 in (12 ft 3 in)', min:'', sec:'§R311.7.3'},
+    {item:'Landing at top/bottom', req:'Min 36×36 in', min:'', sec:'§R311.7.6'},
+  ].map(r=>`<tr><td>${r.item}</td><td style="font-weight:600">${r.req}</td><td>${r.min}</td><td style="color:var(--accent);font-size:12px">${r.sec}</td></tr>`).join('');
+  return stepCard(6,
+    `IRC ${year} §R311.7 — Stairways`,
+    'Stair Dimensions',
+    '<strong>What are we determining?</strong> Establish the minimum dimensional requirements for stairways per §R311.7. These include riser height, tread depth, stair width, headroom clearance, handrail height and graspability, nosing projection, and landing dimensions.',
+    `<strong>§R311.7</strong> is in Chapter 3. The most commonly cited requirements are: max riser 7¾ in, min tread 10 in, and min width 36 in. Each stair must have a graspable handrail on at least one side. Open risers are not permitted in IRC-regulated stairs (§R311.7.5.1 note).`,
+    `<div class="results-tbl-wrap"><table class="res-tbl">
+      <thead><tr><th>Element</th><th>Maximum / Required</th><th>Minimum</th><th>Section</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>
+    <div class="result-box info"><p><strong>Uniformity rule §R311.7.5:</strong> Greatest riser height and smallest tread depth on a flight shall not exceed smallest riser/greatest tread by more than ⅜ inch. All risers must be uniform within ⅜ inch.</p></div>
+    <div class="btn-row">
+      <button class="btn-secondary" onclick="prevStep()">← Back</button>
+      <button class="btn-primary" onclick="completeStep(6, {stairs:true})">Confirm Stair Requirements →</button>
+    </div>`
+  );
+}
+
+function ircStep7(){
+  const year = codeYear();
+  const rows = [
+    {loc:'Open sides of stairs ≥ 30" above floor or grade', req:'Guardrail required', ht:'34–38 in', sec:'§R312.1/§R311.7.8'},
+    {loc:'Open-sided floors, mezzanines, balconies', req:'Guardrail required', ht:'36 in min', sec:'§R312.1'},
+    {loc:'Porches, decks ≥ 30" above grade', req:'Guardrail required', ht:'36 in min', sec:'§R312.1'},
+    {loc:'Guard opening balusters', req:'Max 4 in opening', ht:'Test with 4" sphere', sec:'§R312.1.3'},
+    {loc:'Intermediate rails / balusters', req:'Prevent climbing', ht:'No horizontal rails (child hazard)', sec:'§R312.1.3'},
+  ].map(r=>`<tr><td>${r.loc}</td><td>${pill('warn','Required')}</td><td style="font-weight:600">${r.ht}</td><td style="color:var(--accent);font-size:12px">${r.sec}</td></tr>`).join('');
+  return stepCard(7,
+    `IRC ${year} §R312 — Guards (Guardrails)`,
+    'Guardrail Requirements',
+    '<strong>What are we determining?</strong> Identify all locations where guards (guardrails) are required by §R312 and verify minimum height and opening limitations. Guards are required wherever there is an open side 30 inches or more above the floor or grade below.',
+    `<strong>§R312</strong> in Chapter 3 covers guards. The key rule: any open-sided walking surface (deck, porch, balcony, floor edge) more than 30 inches above grade or the floor below requires a guard at least 36 inches high. Openings in guards must not pass a 4-inch sphere. Horizontal rails that create a "ladder" are not permitted.`,
+    `<div class="results-tbl-wrap"><table class="res-tbl">
+      <thead><tr><th>Location / Condition</th><th>Guard Required</th><th>Min Height</th><th>Section</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>
+    <div class="result-box info"><p><strong>§R312.1.2 Height:</strong> Guards shall not be less than 36 in measured vertically from the adjacent walking surface. Exception: handrails at stairs serve as guards and are permitted at 34–38 in per §R311.7.8.</p></div>
+    <div class="btn-row">
+      <button class="btn-secondary" onclick="prevStep()">← Back</button>
+      <button class="btn-primary" onclick="completeStep(7, {guards:true})">Confirm Guardrails →</button>
+    </div>`
+  );
+}
+
+function ircStep8(){
+  const year = codeYear();
+  const baths = state.bathrooms;
+  const bathRows = [
+    {item:'Water closet centerline to obstruction', req:'Min 15 in (18 in preferred)', sec:'§P2705.1'},
+    {item:'Clearance in front of water closet', req:'Min 21 in', sec:'§P2705.1'},
+    {item:'Lavatory clearance', req:'Min 4 in to wall; 21 in front', sec:'§P2709'},
+    {item:'Shower minimum dimensions', req:'30×30 in clear inside', sec:'§P2708.1'},
+    {item:'Tub clearance (one side)', req:'Min 24 in access', sec:'§P2702'},
+    {item:'Kitchen sink to cooktop', req:'No IRC minimum; 15–18 in recommended', sec:'§P2705'},
+  ].map(r=>`<tr><td>${r.item}</td><td style="font-weight:600">${r.req}</td><td style="color:var(--accent);font-size:12px">${r.sec}</td></tr>`).join('');
+  const elecRows = [
+    {loc:'Countertop receptacles (kitchen)', req:'Every 4 ft of countertop; 20A circuit', sec:'§E3901.4.1', type:'GFCI'},
+    {loc:'Countertop within 6 ft of sink', req:'GFCI protection required', sec:'§E3902.1', type:'GFCI'},
+    {loc:'Bathroom receptacles', req:'At least 1 per bathroom; 20A; GFCI', sec:'§E3902.1', type:'GFCI'},
+    {loc:'Garage receptacles', req:'GFCI required for all', sec:'§E3902.2', type:'GFCI'},
+    {loc:'Outdoor receptacles', req:'GFCI required for all', sec:'§E3902.3', type:'GFCI'},
+    {loc:'Bedrooms', req:'AFCI protection required', sec:'§E3902.12', type:'AFCI'},
+    {loc:'Living rooms, family rooms, dens, dining', req:'AFCI protection required', sec:'§E3902.12', type:'AFCI'},
+    {loc:'Hallways, closets, sunrooms', req:'AFCI protection — IRC 2021 expanded scope', sec:'§E3902.12', type:'AFCI'},
+  ].map(r=>`<tr><td>${r.loc}</td><td>${r.req}</td><td>${pill(r.type==='GFCI'?'warn':'info',r.type)}</td><td style="color:var(--accent);font-size:12px">${r.sec}</td></tr>`).join('');
+
+  return stepCard(8,
+    `IRC ${year} §P2705 · §P2709 · §E3902`,
+    'Plumbing Clearances, GFCI & AFCI',
+    '<strong>What are we determining?</strong> Verify minimum plumbing fixture clearances per Chapter P27, and identify all locations requiring GFCI (ground fault) and AFCI (arc fault) circuit interrupter protection per Chapter E39.',
+    `Chapter <strong>P27</strong> contains plumbing fixture requirements. Key: water closet 15 in to wall, 21 in in front. Showers must be at least 30×30 in. Chapter <strong>E39</strong> covers GFCI (§E3902.1) and AFCI (§E3902.12). GFCI is required in wet locations (kitchens, baths, garages, outdoors). AFCI is required in sleeping areas and — expanded in IRC 2021 — in virtually all habitable rooms.`,
+    `<span class="section-label">Plumbing Fixture Clearances — ${baths} Bathroom${baths>1?'s':''}</span>
+    <div class="results-tbl-wrap"><table class="res-tbl">
+      <thead><tr><th>Fixture / Clearance</th><th>Requirement</th><th>Section</th></tr></thead>
+      <tbody>${bathRows}</tbody>
+    </table></div>
+    <span class="section-label mt16">Electrical GFCI & AFCI Requirements</span>
+    <div class="results-tbl-wrap"><table class="res-tbl">
+      <thead><tr><th>Location</th><th>Requirement</th><th>Type</th><th>Section</th></tr></thead>
+      <tbody>${elecRows}</tbody>
+    </table></div>
+    ${year===2021?'<div class="result-box warn"><p><strong>IRC 2021 Expanded AFCI Scope (§E3902.12):</strong> Hallways, closets, sunrooms, and laundry areas now require AFCI protection — this is an expansion from IRC 2018 which primarily required AFCI in sleeping areas and living spaces.</p></div>':''}
+    <div class="btn-row">
+      <button class="btn-secondary" onclick="prevStep()">← Back</button>
+      <button class="btn-primary" onclick="completeStep(8, {plumbing:true})">Confirm Plumbing & Electrical →</button>
+    </div>`
+  );
+}
+
+function ircStep9(){
+  const year = codeYear();
+  const irc21 = year===2021;
+  const zoneOpts = [2,3,4,5,6].map(z=>`<option value="${z}"${state.climateZone==z?' selected':''}>${z}</option>`).join('');
+  const zone = state.climateZone || '3';
+  const ed = ENERGY_DATA[zone];
+  const rows = [
+    {item:'Ceiling / Attic', v18: ed.ceil18, v21: ed.ceil21},
+    {item:'Above-grade walls', v18: ed.wall18, v21: ed.wall21},
+    {item:'Windows (U-factor)', v18: 'U-'+ed.win18, v21: 'U-'+ed.win21},
+    {item:'Floors over uncond. space', v18: ed.floor18, v21: ed.floor21},
+  ];
+
+  return stepCard(9,
+    `IRC ${year} Chapter N1100 / IECC R-values`,
+    'Energy Code — Insulation & Windows',
+    '<strong>What are we determining?</strong> Identify the minimum insulation R-values and window U-factors required by IRC Chapter 11 (Energy Efficiency) / IECC for the building\'s climate zone. IRC 2021 has generally higher requirements than IRC 2018 due to updated IECC alignment.',
+    `IRC <strong>Chapter N1100</strong> (or IECC Table R402.1.2) contains the prescriptive insulation requirements by climate zone. Find your climate zone (1–8) on the IECC map or in Table R402.1.2. Read the required R-value for each assembly. <strong>IRC 2021</strong> updated requirements align with the 2021 IECC, which is more stringent than the 2018 IECC used by IRC 2018.`,
+    `<div class="form-group" style="margin-bottom:16px;max-width:220px"><label>Climate Zone</label><select id="cz-select" onchange="state.climateZone=this.value;renderStep(9)">${zoneOpts}</select></div>
+    <div class="results-tbl-wrap"><table class="res-tbl">
+      <thead><tr><th>Assembly</th><th>IRC 2018 Requirement</th><th>IRC 2021 Requirement</th><th>Applies</th></tr></thead>
+      <tbody>${rows.map(r=>`<tr><td style="font-weight:600">${r.item}</td><td>${r.v18}</td><td>${r.v21}</td><td>${pill(r.v18===r.v21?'pass':'warn', r.v18===r.v21?'Same':'Changed')}</td></tr>`).join('')}</tbody>
+    </table></div>
+    <div class="result-box ${irc21?'warn':'info'}"><p><strong>Your code (IRC ${year}) requires:</strong> Ceiling ${irc21?ed.ceil21:ed.ceil18} | Walls ${irc21?ed.wall21:ed.wall18} | Windows U-${irc21?ed.win21:ed.win18} | Floors ${irc21?ed.floor21:ed.floor18}</p></div>
+    <p class="tbl-note">Prescriptive path shown. Performance path (§N1101.14 / IECC §R405) or UA alternative (§N1101.14.1) may also be used. Verify climate zone with jurisdiction — many areas adopt IECC separately from the IRC.</p>
+    <div class="btn-row">
+      <button class="btn-secondary" onclick="prevStep()">← Back</button>
+      <button class="btn-primary" onclick="completeStep(9, {climateZone: zone, energy: true})">Confirm Energy Requirements →</button>
+    </div>`
+  );
+}
+
+function ircStep10(){
+  const year = codeYear();
+  const rows = [
+    {item:'Soil investigation', req:'§R401.4 — Class of fill/soil required for footings. Test if expansive, compressible, or unknown.', sec:'§R401.4'},
+    {item:'Frost depth', req:'Footings must be below frost line (per local table). Verify with AHJ.', sec:'§R403.1.4.1'},
+    {item:'Footing width — 1-story', req:'Min 12 in wide × 6 in thick', sec:'§R403.1'},
+    {item:'Footing width — 2-story', req:'Min 15 in wide × 7 in thick', sec:'§R403.1'},
+    {item:'Footing width — 3-story', req:'Min 23 in wide × 8 in thick', sec:'§R403.1'},
+    {item:'Foundation wall — 8" poured concrete', req:'Min 6 in above grade', sec:'§R406/R403.1.6'},
+    {item:'Dampproofing / waterproofing', req:'§R406 — required for basement walls below grade', sec:'§R406'},
+    {item:'Drainage', req:'§R405 — gravel drainage layer or drain tile at base of wall', sec:'§R405'},
+    {item:'Under-floor ventilation', req:'§R408.1 — 1 sf per 150 sf of crawl space (or sealed crawl per §R408.3)', sec:'§R408'},
+    {item:'Termite protection', req:'§R318 — required in termite zones (verify local map)', sec:'§R318'},
+    {item:'Radon mitigation', req:'§R325 (IRC 2021) — passive system in Zone 1 areas; active in Zone 2', sec:'§R325'},
+  ].map(r=>`<tr><td style="font-weight:600;font-size:13px">${r.item}</td><td style="font-size:13px">${r.req}</td><td style="color:var(--accent);font-size:12px;white-space:nowrap">${r.sec}</td></tr>`).join('');
+
+  return stepCard(10,
+    `IRC ${year} §R401–§R408 — Foundations`,
+    'Foundation Requirements',
+    '<strong>What are we determining?</strong> Review minimum foundation requirements including soil bearing, frost depth, footing sizes, foundation wall height, dampproofing, drainage, and under-floor ventilation per §R401 through §R408.',
+    `Chapter <strong>R4</strong> covers foundations. Start with <strong>§R401.4</strong> (soils) — if soil conditions are unknown or poor, a geotechnical investigation may be needed. <strong>§R403.1</strong> has Table R403.1 with footing width and thickness by number of stories. <strong>§R403.1.4.1</strong> requires footings below the frost depth — your AHJ will specify the local frost depth. <strong>§R406</strong> covers dampproofing and waterproofing for below-grade walls.`,
+    `<div class="results-tbl-wrap"><table class="res-tbl">
+      <thead><tr><th>Requirement</th><th>Standard / Action</th><th>Section</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>
+    ${year===2021?'<div class="result-box warn"><p><strong>IRC 2021 §R325 — Radon:</strong> New section added requiring passive radon mitigation systems (rough-in vent pipe under slab) in Zone 1 areas and active systems in Zone 2. Check EPA radon zone map for your jurisdiction.</p></div>':''}
+    ${state.hasBasement?'<div class="result-box warn"><p><strong>Basement present:</strong> §R406 waterproofing and §R405 drainage are required. Consider a drainage board and footing drain to daylight or sump pit.</p></div>':''}
+    <div class="btn-row">
+      <button class="btn-secondary" onclick="prevStep()">← Back</button>
+      <button class="btn-primary" onclick="completeStep(10, {foundation:true})">Complete Workbook →</button>
+    </div>`
+  );
+}
+
+// =========================================================
+// FINAL SUMMARY
+// =========================================================
+function renderFinalSummary(){
+  const year = codeYear();
+  let html = '';
+  if(isIBC()){
+    const r1 = state.results[1]||{};
+    const r2 = state.results[2]||{};
+    const r3 = state.results[3]||{};
+    const r4 = state.results[4]||{};
+    const r5 = state.results[5]||{};
+    const r10 = state.results[10]||{};
+    const ct = state.constType ? CONST_TYPES[state.constType] : null;
+    html = `<div class="summary-card">
+      <div class="summary-header">
+        <h2>IBC ${year} — Compliance Summary</h2>
+        <p>${r1.name||state.projectName} — ${r1.city||state.projectCity} | Generated ${new Date().toLocaleDateString()}</p>
+      </div>
+      <div class="summary-body">
+        <div class="summary-section">
+          <h3>Project Overview</h3>
+          <div class="summary-row"><span class="sr-label">Code Edition</span><span class="sr-val">IBC ${year}</span></div>
+          <div class="summary-row"><span class="sr-label">Project</span><span class="sr-val">${r1.name||state.projectName}</span></div>
+          <div class="summary-row"><span class="sr-label">Jurisdiction</span><span class="sr-val">${r1.city||state.projectCity}</span></div>
+          <div class="summary-row"><span class="sr-label">Number of Stories</span><span class="sr-val">${state.floors.length}</span></div>
+          <div class="summary-row"><span class="sr-label">Occupancy Groups</span><span class="sr-val">${[...new Set(state.floors.map(f=>f.occ))].join(', ')}</span></div>
+        </div>
+        <div class="summary-section">
+          <h3>Chapter 6 — Construction Type (Table 601)</h3>
+          <div class="summary-row"><span class="sr-label">Selected Type</span><span class="sr-val">${ct?ct.label:'—'}</span></div>
+          <div class="summary-row"><span class="sr-label">Structural Frame Rating</span><span class="sr-val">${ct?ct.str[0]+' hr':'—'}</span></div>
+          <div class="summary-row"><span class="sr-label">Floor Rating</span><span class="sr-val">${ct?ct.str[3]+' hr':'—'}</span></div>
+        </div>
+        <div class="summary-section">
+          <h3>Chapter 5 — Height & Area (Tables 504.3/504.4/506.2)</h3>
+          <div class="summary-row"><span class="sr-label">Height Check</span><span class="sr-val">${r3.pass?pill('pass','PASS'):pill('fail','REVIEW')}</span></div>
+          <div class="summary-row"><span class="sr-label">Sprinkler System</span><span class="sr-val">${state.sprinklered?pill('pass','Yes — NFPA 13'):pill('warn','No sprinklers')}</span></div>
+          <div class="summary-row"><span class="sr-label">§506.3 Area Multiplier</span><span class="sr-val">${state.sprinklered?'×3 applied':'Not applicable'}</span></div>
+        </div>
+        <div class="summary-section">
+          <h3>Chapter 9 — Fire Protection (§903.2)</h3>
+          <div class="summary-row"><span class="sr-label">Auto Sprinkler Required</span><span class="sr-val">${state.sprinklered?pill('warn','Yes — §903.2'):pill('pass','Not triggered')}</span></div>
+        </div>
+        <div class="summary-section">
+          <h3>Chapter 10 — Egress (Tables 1004.5, 1006.3.4, 1017.2)</h3>
+          <div class="summary-row"><span class="sr-label">Total Occupant Load</span><span class="sr-val">${r5.totalOcc||'—'} persons</span></div>
+          ${state.floors.map((f,i)=>{
+            const lf=OCC_LOAD[f.occ]||[100,true];
+            const occ=Math.ceil((f.area||0)/lf[0]);
+            const td=TRAVEL_DIST[f.occ]||[200,250];
+            return `<div class="summary-row"><span class="sr-label">${['Ground (L1)','Level 2','Level 3','Level 4','Level 5'][i]||'Level '+(i+1)} (${f.occ})</span><span class="sr-val">${occ} persons · Max travel ${state.sprinklered?td[1]:td[0]}ft</span></div>`;
+          }).join('')}
+        </div>
+        <div class="summary-section">
+          <h3>Chapter 5 — Fire Separations (Table 508.4)</h3>
+          ${(()=>{
+            const occs=[...new Set(state.floors.map(f=>f.occ))];
+            if(occs.length<2) return '<div class="summary-row"><span class="sr-label">Mixed Occupancy</span><span class="sr-val">Single occupancy — no separation required</span></div>';
+            return occs.flatMap((a,i)=>occs.slice(i+1).map(b=>{
+              const h=getSepHours(a,b);
+              return `<div class="summary-row"><span class="sr-label">${a} / ${b}</span><span class="sr-val">${h>0?h+'hr fire barrier required':'No separation required'}</span></div>`;
+            })).join('');
+          })()}
+        </div>
+        <div class="summary-section">
+          <h3>Chapter 16 — Live Loads (Table 1607.1)</h3>
+          ${[...new Set(state.floors.map(f=>f.occ))].map(occ=>{
+            const ll=LIVE_LOADS[occ];
+            return ll?`<div class="summary-row"><span class="sr-label">${occ}</span><span class="sr-val">${ll.load} psf UDL / ${ll.conc.toLocaleString()} lbs conc.</span></div>`:'';
+          }).join('')}
+          <div class="summary-row"><span class="sr-label">Guardrail loads (Table 1607.8)</span><span class="sr-val">200 lbs concentrated / 50 lbs/ft distributed</span></div>
+        </div>
+        <div class="summary-section">
+          <h3>Chapter 17 — Special Inspections (§1705)</h3>
+          ${r10.specialInsp&&r10.specialInsp.length>0
+            ?r10.specialInsp.map(s=>`<div class="summary-row"><span class="sr-label">${s}</span><span class="sr-val">${pill('warn','Required')}</span></div>`).join('')
+            :'<div class="summary-row"><span class="sr-label">Items selected</span><span class="sr-val">None — verify with EOR</span></div>'}
+        </div>
+      </div>
+    </div>`;
+  } else {
+    // IRC summary
+    const r1=state.results[1]||{};
+    const zone=state.climateZone||'3';
+    const ed=ENERGY_DATA[zone];
+    const irc21=year===2021;
+    html = `<div class="summary-card">
+      <div class="summary-header">
+        <h2>IRC ${year} — Compliance Summary</h2>
+        <p>${state.projectName||'Project'} — ${state.projectCity||''} | Generated ${new Date().toLocaleDateString()}</p>
+      </div>
+      <div class="summary-body">
+        <div class="summary-section">
+          <h3>Project Overview (§R101)</h3>
+          <div class="summary-row"><span class="sr-label">Code Edition</span><span class="sr-val">IRC ${year}</span></div>
+          <div class="summary-row"><span class="sr-label">Project</span><span class="sr-val">${state.projectName}</span></div>
+          <div class="summary-row"><span class="sr-label">Jurisdiction</span><span class="sr-val">${state.projectCity}</span></div>
+          <div class="summary-row"><span class="sr-label">Dwelling Type</span><span class="sr-val">${state.dwellingType}</span></div>
+          <div class="summary-row"><span class="sr-label">Stories / Floor Area</span><span class="sr-val">${state.stories} stories / ${state.floorArea.toLocaleString()} sf</span></div>
+          <div class="summary-row"><span class="sr-label">Bedrooms / Bathrooms</span><span class="sr-val">${state.bedrooms} BR / ${state.bathrooms} BA</span></div>
+        </div>
+        <div class="summary-section">
+          <h3>Chapter 3 — Life Safety</h3>
+          <div class="summary-row"><span class="sr-label">Smoke Alarms (§R314)</span><span class="sr-val">${state.bedrooms + 1 + state.stories + (state.hasBasement?1:0)} min required</span></div>
+          <div class="summary-row"><span class="sr-label">CO Alarms (§R315)</span><span class="sr-val">Required — outside bedrooms and at fuel-burning appliances</span></div>
+          <div class="summary-row"><span class="sr-label">EEROs (§R310)</span><span class="sr-val">${state.bedrooms+(state.hasBasement?1:0)} required (bedrooms${state.hasBasement?' + basement':''})</span></div>
+          <div class="summary-row"><span class="sr-label">Sprinklers (§R313)</span><span class="sr-val">${pill('info','Check AHJ — IRC not nationally required')}</span></div>
+        </div>
+        <div class="summary-section">
+          <h3>Chapter 3 — Stairs, Guards & Rooms</h3>
+          <div class="summary-row"><span class="sr-label">Stair riser / tread (§R311.7)</span><span class="sr-val">Max 7¾" riser / Min 10" tread</span></div>
+          <div class="summary-row"><span class="sr-label">Guardrail height (§R312.1)</span><span class="sr-val">36 in min above floor/grade; 4 in max opening</span></div>
+          <div class="summary-row"><span class="sr-label">Room minimum (§R304.1)</span><span class="sr-val">${irc21?'120 sf (one room), 70 sf (all others) — IRC 2021':'70 sf minimum all habitable rooms — IRC 2018'}</span></div>
+          <div class="summary-row"><span class="sr-label">Ceiling height (§R305.1)</span><span class="sr-val">7 ft min habitable / 6 ft 8 in hallways & baths</span></div>
+        </div>
+        <div class="summary-section">
+          <h3>Chapter E39 — Electrical</h3>
+          <div class="summary-row"><span class="sr-label">GFCI (§E3902.1)</span><span class="sr-val">Kitchen, baths, garage, outdoor — all receptacles</span></div>
+          <div class="summary-row"><span class="sr-label">AFCI (§E3902.12)</span><span class="sr-val">${irc21?'Bedrooms, living, dining, halls, closets, laundry — IRC 2021 expanded':'Bedrooms and living areas — IRC 2018'}</span></div>
+        </div>
+        <div class="summary-section">
+          <h3>Chapter N11 — Energy (Climate Zone ${zone})</h3>
+          <div class="summary-row"><span class="sr-label">Ceiling insulation</span><span class="sr-val">${irc21?ed.ceil21:ed.ceil18}</span></div>
+          <div class="summary-row"><span class="sr-label">Above-grade walls</span><span class="sr-val">${irc21?ed.wall21:ed.wall18}</span></div>
+          <div class="summary-row"><span class="sr-label">Window U-factor</span><span class="sr-val">U-${irc21?ed.win21:ed.win18} max</span></div>
+          <div class="summary-row"><span class="sr-label">Floor insulation</span><span class="sr-val">${irc21?ed.floor21:ed.floor18}</span></div>
+        </div>
+        <div class="summary-section">
+          <h3>Chapter R4 — Foundation (§R401–§R408)</h3>
+          <div class="summary-row"><span class="sr-label">Frost depth (§R403.1.4.1)</span><span class="sr-val">Verify frost depth with AHJ / local table</span></div>
+          <div class="summary-row"><span class="sr-label">Footing size (§R403.1)</span><span class="sr-val">${state.stories===1?'12"W × 6"T min':state.stories===2?'15"W × 7"T min':'23"W × 8"T min'}</span></div>
+          <div class="summary-row"><span class="sr-label">Dampproofing (§R406)</span><span class="sr-val">${state.hasBasement?pill('warn','Required — basement present'):pill('pass','Check below-grade walls')}</span></div>
+          ${irc21?'<div class="summary-row"><span class="sr-label">Radon (§R325)</span><span class="sr-val">'+pill('warn','IRC 2021 — verify EPA radon zone')+'</span></div>':''}
+        </div>
+      </div>
+    </div>`;
+  }
+
+  document.getElementById('step-container').innerHTML = html +
+    `<div class="btn-row" style="margin-top:20px;justify-content:center">
+      <button class="btn-primary" onclick="window.print()">🖨 Print Summary</button>
+      <button class="btn-secondary" onclick="restartWorkbook()">← Start New Project</button>
+    </div>`;
+
+  document.getElementById('progress-fill').style.width = '100%';
+  document.getElementById('progress-label').textContent = 'Workbook Complete';
+  document.querySelectorAll('.step-dot').forEach(d=>{
+    d.className='step-dot done';
+  });
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+</script>
+</body>
+</html>
